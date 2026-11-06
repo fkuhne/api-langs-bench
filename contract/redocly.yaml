@@ -1,0 +1,6 @@
+# The contract's lint (spec/decisions/0013): Redocly's recommended rules, but one.
+extends:
+  - recommended
+rules:
+  # The health endpoints have no client error to answer.
+  operation-4xx-response: off

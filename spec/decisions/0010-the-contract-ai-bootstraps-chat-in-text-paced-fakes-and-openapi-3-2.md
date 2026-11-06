@@ -91,7 +91,7 @@ The contract is ai-bootstrap's stateless chat, cut to text. Both fakes make a fi
 
 ## Assumptions to verify
 
-- [ ] A linter accepts OpenAPI 3.2. Redocly CLI says it does, on weak sources. To check in step 1.2.
+- [x] A linter accepts OpenAPI 3.2. Redocly CLI says it does, on weak sources. To check in step 1.2. *Checked on 2026-11-06 with Redocly CLI 2.69.0 (`docker compose run --rm contract-checks`, on Colima on the owner's M3): `contract/openapi.yaml` lints clean as 3.2.0. The same file declared as 3.1.0, or with `itemSchema` misspelt, fails its `struct` rule, so the 3.2 structure is checked, not skipped.*
 - [ ] Each language's documented production set-up can send an event at once, without buffering it: uvicorn for Python, `net/http`'s flushing for Go. To check in steps 1.3 to 1.5.
 - [ ] Each framework learns that a streaming client has left, and stops the work. For example, the generator is cancelled in FastAPI, and the request's context in Go. Unchecked; measured in step 3.3.
 - [ ] Go's OpenAI SDK can pass free parameters through unchanged. Unchecked; step 2.2.

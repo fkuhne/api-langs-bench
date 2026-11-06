@@ -47,7 +47,7 @@ Every language's gates are about equally strict, and each runs as `docker compos
 ## Assumptions to verify
 
 - [ ] golangci-lint v2's linters, as chosen, are about as strict as ruff's selected families. Judged by reading, not measured; reviewed once both backends exist (step 1.4).
-- [ ] Redocly CLI lints OpenAPI 3.2, as [0010](0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md) assumes. To check in this step.
+- [x] Redocly CLI lints OpenAPI 3.2, as [0010](0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md) assumes. To check in this step. *Checked on 2026-11-06 with Redocly CLI 2.69.0 (`docker compose run --rm contract-checks`, on Colima on the owner's M3): `contract/openapi.yaml` lints clean as 3.2.0. The same file declared as 3.1.0, or with `itemSchema` misspelt, fails its `struct` rule, so the 3.2 structure is checked, not skipped.*
 
 ## Sources
 

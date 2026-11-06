@@ -8,6 +8,7 @@ A change here changes every backend and the conformance suite in the same commit
 
 - [`openapi.yaml`](openapi.yaml): the endpoints, the bodies and each event's data, in OpenAPI 3.2.
 - **This page:** what no schema says: the events' order, sending each one at once, a client that leaves, the fakes, and how answers are compared.
+- [`redocly.yaml`](redocly.yaml): the lint's rules: Redocly's recommended set, except the rule that wants a 4xx answer on every endpoint, which the health endpoints don't have ([0013](../spec/decisions/0013-gates-equally-strict-for-every-language.md)).
 - [`fake-tokens.json`](fake-tokens.json): the 175 tokens both fakes answer with. They hold quotes, `<`, `&`, backslashes, accents, three scripts and an emoji, so each language's JSON encoder does real work.
 
 ## The endpoints
