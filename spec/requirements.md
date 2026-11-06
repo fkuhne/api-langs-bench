@@ -1,0 +1,31 @@
+# Requirements
+
+Each row comes from [`product.md`](product.md) and says how it will be met and how we'll know. A row isn't traded away for convenience. If one has to change, change `product.md` first.
+
+"How it's met" names the plan step or the decision while the row is still to build. Once built, it names the code.
+
+| # | Requirement | How it's met | How it's verified |
+|---|---|---|---|
+| R1 | Every backend implements the same API: ai-bootstrap's stateless chat, whole and streamed, with its readiness check and its errors. Text only | One written contract, from ai-bootstrap's chat ([0003](decisions/0003-every-backend-implements-ai-bootstraps-chat-api.md)); step 1.1 | A conformance suite runs the same requests against every backend (step 1.5) |
+| R2 | The upstream is a setting, the same for every backend: the in-process fake, the fake server, llama.cpp, the remote imitation or Ollama Cloud | [0004](decisions/0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md), [0006](decisions/0006-a-remote-upstream-ollama-cloud-beside-a-local-imitation.md); steps 2.1 to 2.3 and 4.1 to 4.2 | The conformance suite passes against each upstream |
+| R3 | Both fakes behave the same: the same tokens, the same time to the first, the same gap between them | The fakes' behaviour written in the contract (step 1.1) | The evaluation tool checks each backend's tokens and timing against it before measuring |
+| R4 | No helper is the bottleneck: the fake server, the network emulator, PostgreSQL and the load generator each reach well beyond any backend's ceiling | Each measured on its own first (steps 1.6, 2.1, 4.1 and 5.2) | A run against the helper alone, written down in `docs/` |
+| R5 | Every backend runs under the same limits: its own container, the same CPU and memory, the load generator on other cores | [0008](decisions/0008-run-anywhere-with-docker-and-record-the-machine.md); step 3.1 | Each run records the limits it ran under, read from Docker |
+| R6 | Each backend is written as a competent engineer would, following its ecosystem's documented production set-up, and none is tuned alone | A written rule (step 3.1) | Each backend's set-up cites the documentation it follows |
+| R7 | Latency: p50, p95 and p99, whole and streamed, at fixed arrival rates, without coordinated omission | An open-loop load generator (steps 1.6 and 3.2) | Unit tests on hand-computed cases; a run against an upstream with a known delay |
+| R8 | Time to first token through the backend, and the time the backend adds over its upstream | Step 2.4 | Against the fake server, whose time to first token is known |
+| R9 | Stream behaviour: the jitter a backend adds between tokens, whether it buffers, and how fast a client's leaving stops the upstream | Step 3.3 | Against the fake server at a known pace; the fake server logs when each stream is closed |
+| R10 | Throughput at fixed rates, and the ceiling, found by one written rule | Step 3.2 | Unit tests on the rule |
+| R11 | Resources: memory (idle and peak), CPU, image size and start-up time | Step 3.4 | Checked once by hand against `docker stats` |
+| R12 | A remote upstream: a repeatable imitation, and Ollama Cloud at low rates, with the backends interleaved | [0006](decisions/0006-a-remote-upstream-ollama-cloud-beside-a-local-imitation.md); Phase 4 | The imitation's numbers set beside Ollama Cloud's (step 4.3) |
+| R13 | Conversations: ai-bootstrap's, in text, on PostgreSQL, with one schema for every backend; reset before each run | [0005](decisions/0005-conversations-on-postgresql-as-version-1s-last-backend-phase.md); Phase 5 | The conformance suite; a run with more streams than database connections |
+| R14 | Every run can be repeated, and says what it ran on: one command; each run saved once with the commit, the versions, the settings, the model and the machine | [0008](decisions/0008-run-anywhere-with-docker-and-record-the-machine.md); steps 1.6 and 3.5 | A run against the in-process fakes, made twice, gives the same answers and numbers within a stated spread |
+| R15 | A web UI starts a run through the same runner, and shows the runs and a comparison of the backends. It stays quiet during a run | [0007](decisions/0007-a-web-ui-that-runs-the-benchmark-and-shows-its-results.md); step 6.1 | A run started from the UI matches one started from the command |
+| R16 | It runs on any machine with Docker, with the same commands in PowerShell, cmd and POSIX shells | [0008](decisions/0008-run-anywhere-with-docker-and-record-the-machine.md); step 1.2 | Run on two machines before the report |
+| R17 | No paid service is needed; Ollama Cloud is optional, on its free models | [0006](decisions/0006-a-remote-upstream-ollama-cloud-beside-a-local-imitation.md) | CI runs with no key |
+| R18 | Quality gates for each language, in Docker and in CI | Step 1.2, step 1.7 | CI fails below any gate |
+| R19 | Every claim in the notes names its source | `docs/` cites the source and the date. A computed number is marked "computed", and a claim from memory "unchecked" | Reviewed at the end of each phase |
+| R20 | Every measurement is written down with how it was run | The step's notes in `docs/` | Each number in `docs/` names its command, its settings and the machine |
+| R21 | No money is spent without a record | A record for each purchase, rental or paid API | Each cost appears in a record |
+| R22 | Every decision has a record | `spec/decisions/` ([0001](decisions/0001-work-from-a-spec-and-record-every-decision.md)) | Reviewed at the end of each phase |
+| R23 | Any coding agent can pick the work up | `AGENTS.md`, which `CLAUDE.md` and `GEMINI.md` import; the `next-step` and `decide` skills | A new session finds the next step and its context from the repository alone |

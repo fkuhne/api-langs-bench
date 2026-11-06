@@ -1,0 +1,17 @@
+.env
+.DS_Store
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Weights never go in git; they live in the Hugging Face cache or a run's folder.
+*.safetensors
+*.pth
+*.pt
+*.bin
+*.ckpt
+*.gguf
+*.onnx

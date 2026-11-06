@@ -1,0 +1,42 @@
+# 0008. Run anywhere with Docker, and record the machine
+
+- Status: Proposed
+- Date: 2026-11-06
+
+## Context
+
+The owner wants the benchmark to run "locally, in this machine, or in any other" (2026-11-06). Readers will run it on their own machines. No machine is fixed, so none can bound the design.
+
+Numbers from different machines can't be compared, and a backend's numbers depend on the CPU and memory it's given.
+
+## Decision
+
+- **Everything runs in Docker Compose:** the backends, the upstreams, the database and the evaluation tool.
+- **Commands are Docker commands,** the same in PowerShell, cmd and POSIX shells, as in the sibling projects.
+- **Pinned:** images, dependencies and the model, to exact versions.
+- **The same limits for every backend:** each in its own container, with the same CPU and memory. The load generator runs on other cores. How is plan step 3.1.
+- **Every run records its machine:** the CPU's model and cores, the memory, the OS, Docker's version, whether Docker runs inside a VM, and the limits each container ran under.
+- **Settings come from environment variables,** each with a working default, and a line in `.env.example`. `.env` is optional.
+- **Ports are published on `127.0.0.1` only.**
+
+## Alternatives considered
+
+| Option | Why we didn't choose it |
+|---|---|
+| Native runs, with each language's toolchain installed | Closer to the metal, but every reader's toolchain differs, and the same limits are hard to set. |
+| A fixed cloud VM type, such as AWS's t3.medium | Repeatable hardware, but it costs money, and the owner wants any machine. A VM can still be a run's machine. |
+
+## Consequences
+
+- Docker Desktop on macOS and Windows runs containers inside a Linux VM (unchecked, from memory). Numbers from it may not match native Linux, so the run's record says which.
+- The report compares numbers from one machine at a time, never across machines.
+
+## Assumptions to verify
+
+- [ ] Docker's CPU limits hold each backend to the same share on Docker Desktop as on Linux.
+- [ ] Docker's networking adds the same cost to every backend.
+
+## Sources
+
+- The interview, 2026-11-06.
+- The conventions of the owner's sibling projects, such as decision-models-eval and ai-bootstrap.
