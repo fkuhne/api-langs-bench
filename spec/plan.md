@@ -15,7 +15,7 @@ The work, as small steps in order. Each step names the decision records it depen
 ## Phase 0: The spec
 
 - [x] 0.1 The product spec, the requirements, this plan and the first records ([0001](decisions/0001-work-from-a-spec-and-record-every-decision.md) to [0009](decisions/0009-publish-as-a-public-github-repository.md)). Also a first pass of the notes, from the prior art, the load tools and the upstreams' documentation ([`docs/benchmarking.md`](../docs/benchmarking.md))
-- [ ] 0.2 The owner reviews the spec, the records and the notes, and picks the name and the licence. The first commit, and the public GitHub repository
+- [x] 0.2 The owner reviews the spec, the records and the notes, and picks the name and the licence. The first commit, and the public GitHub repository
 
 ## Phase 1: A thin slice
 

@@ -1,6 +1,6 @@
 # 0009. Publish as a public GitHub repository
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-06
 
 ## Context
