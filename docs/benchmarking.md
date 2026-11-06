@@ -125,7 +125,27 @@ Since it works on TCP, TLS should pass through it untouched, with the fake serve
 - **The errors:** 502, 503, 504 and 429, each with its reason.
 - **Conversations** are a module of their own, on PostgreSQL. A turn is stored only once its answer is complete.
 
-What we keep of it is [0003](../spec/decisions/0003-every-backend-implements-ai-bootstraps-chat-api.md) and plan step 1.1.
+**Its code,** at [`edc0565`](https://github.com/fkuhne/ai-bootstrap/tree/edc0565) of the public repository, read on 2026-11-06:
+- **A stream starts with 200** once the body is valid. Every upstream failure inside it, even before the first token, becomes an `error` event ([router.py:40-45](https://github.com/fkuhne/ai-bootstrap/blob/main/backend/app/modules/chat/router.py#L40-L45)).
+- **The upstream's chunks.** Each becomes at most one `reasoning` event and one `token` event, and a chunk without text sends nothing. The reasoning is read from `reasoning_content` (llama.cpp, DeepSeek) or `reasoning` (Ollama) ([openai_compatible_client.py](https://github.com/fkuhne/ai-bootstrap/blob/main/backend/app/llm/openai_compatible_client.py)).
+- **Free parameters** go to the upstream through the OpenAI SDK's `extra_body`. The usage comes in a last chunk, asked for with `stream_options.include_usage`. Closing the upstream's response is how a client's leaving stops the model.
+- **The fake** echoes "Fake answer to: <question>", one word per token, with no pacing ([fake_llm_client.py](https://github.com/fkuhne/ai-bootstrap/blob/main/backend/app/llm/fake_llm_client.py)).
+
+**FastAPI 0.143.0,** the version ai-bootstrap pins. Read in its wheel from PyPI on 2026-11-06, in `fastapi/sse.py`, `routing.py`, `exception_handlers.py` and `applications.py`:
+- **Each event** is an `event:` line, a `data:` line and a blank line. A model's data is written with `model_dump_json()`: compact, with nulls included.
+- **After 15 seconds with no event,** it sends the comment `: ping`.
+- **The headers** are `Content-Type: text/event-stream`, `Cache-Control: no-cache` and `X-Accel-Buffering: no`.
+- **An invalid body** answers 422 with `{"detail": [ … ]}`, a list of the validation errors.
+- **The OpenAPI it generates** is version 3.1.0.
+
+What we keep of it is in [`contract/`](../contract/README.md), and why is in [0010](../spec/decisions/0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md).
+
+## Describing a stream in OpenAPI
+
+- **OpenAPI 3.2.0 (September 2025)** adds sequential media types, `text/event-stream` among them. An `itemSchema` describes one event, after parsing ([the specification](https://spec.openapis.org/oas/v3.2.0.html), §4.14.4, and the example "Server-Sent Event Streams", read on 2026-11-06).
+- **An event's `data` is a string.** The JSON inside it is described with `contentMediaType` and `contentSchema`, which validators don't check by default (same section). A conformance check has to parse the data and validate it against the event's schema itself.
+- **The order of events,** such as "exactly one `done` at the end", can't be expressed. Our contract states it in prose.
+- **Tools:** Redocly CLI says it supports 3.2, but on weak sources ([OpenApi.tools](https://openapi.tools/tools/redocly-cli/), [a mirror of its README](https://awesome.ecosyste.ms/projects/github.com%2Fredocly%2Fredocly-cli), read on 2026-11-06). Nothing was found for Spectral or Swagger UI. To check in plan step 1.2.
 
 ## Docker and the numbers
 
