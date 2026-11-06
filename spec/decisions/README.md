@@ -30,3 +30,4 @@ Don't rewrite a record to change its decision. Write a new record and mark the o
 | [0007](0007-a-web-ui-that-runs-the-benchmark-and-shows-its-results.md) | A web UI that runs the benchmark and shows its results | Proposed | 2026-11-06 |
 | [0008](0008-run-anywhere-with-docker-and-record-the-machine.md) | Run anywhere with Docker, and record the machine | Proposed | 2026-11-06 |
 | [0009](0009-publish-as-a-public-github-repository.md) | Publish as a public GitHub repository | Accepted | 2026-11-06 |
+| [0010](0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md) | The contract: ai-bootstrap's chat in text, paced fakes, and OpenAPI 3.2 | Proposed | 2026-11-06 |
