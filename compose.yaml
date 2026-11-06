@@ -16,3 +16,24 @@ services:
       REDOCLY_TELEMETRY: "off"
       REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
     command: ["lint", "--format=stylish", "openapi.yaml"]
+
+  # The Python backend's gates: docker compose run --rm python-fastapi-checks
+  # After a dependency changes, run `docker compose build python-fastapi-checks` first.
+  python-fastapi-checks:
+    build:
+      context: backends/python-fastapi
+      target: dev
+      additional_contexts:
+        contract: contract
+    profiles: [tools]
+    volumes:
+      - ./backends/python-fastapi:/app:ro
+      - ./contract:/contract:ro
+    environment:
+      COVERAGE_FILE: /tmp/.coverage
+      MYPY_CACHE_DIR: /tmp/.mypy_cache
+      RUFF_CACHE_DIR: /tmp/.ruff_cache
+    command:
+      - sh
+      - -c
+      - ruff check && ruff format --check && mypy && pytest -p no:cacheprovider
