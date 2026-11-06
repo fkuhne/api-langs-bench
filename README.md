@@ -8,7 +8,7 @@ The same AI backend, written in several programming languages and measured on th
 
 Python and Go come first; Rust, Java, JavaScript and C++ follow. Fakes stand in for the LLM where its seconds would hide the backend's own cost.
 
-**Status:** starting. The spec and the contract every backend implements are written; there's no code yet.
+**Status:** starting. The spec and the contract every backend implements are written, and each part's gates run in Docker ([`docs/gates.md`](docs/gates.md)). The backends come next.
 
 ## Where to start
 

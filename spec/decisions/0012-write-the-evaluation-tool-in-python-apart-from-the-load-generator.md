@@ -1,6 +1,6 @@
 # 0012. Write the evaluation tool in Python, apart from the load generator
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-06
 
 ## Context

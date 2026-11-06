@@ -37,7 +37,12 @@ What the project covers is in [`spec/product.md`](spec/product.md). What we know
 
 ## Commands
 
-None yet. The first arrive in plan step 1.2, with the repository's layout and the gates in Docker, and each step adds its commands here.
+Every command is a Docker command, the same in PowerShell, cmd and POSIX shells. What each gate runs, and how long it takes, is in [`docs/gates.md`](docs/gates.md).
+- `docker compose run --rm contract-checks` lints the contract's OpenAPI file.
+- `docker compose run --rm python-fastapi-checks` runs the Python backend's gates: ruff, ruff format, `mypy --strict`, and pytest with 90% coverage.
+- `docker compose run --rm go-checks` runs the Go backend's gates: golangci-lint, then `go test -race` with 90% coverage.
+- `docker compose run --rm bench-checks` runs the evaluation tool's gates, the same as the Python backend's.
+- `docker compose run --rm python-lock <folder>`, such as `bench`, rewrites a Python project's `uv.lock` after its dependencies change. Rebuild its checks afterwards, with `docker compose build <name>-checks`.
 
 ## Conventions
 

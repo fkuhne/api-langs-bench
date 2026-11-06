@@ -1,6 +1,6 @@
 # 0013. Gates equally strict for every language
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-06
 
 ## Context
@@ -42,7 +42,8 @@ Every language's gates are about equally strict, and each runs as `docker compos
 
 - A new language arrives with gates as strict as these. The `add-language` skill will say how.
 - CI runs the same commands (step 1.7).
-- Go's checks image pulls golangci-lint's image only to copy its binary out of it.
+- Go's checks image pulls golangci-lint's image only to copy its binary out of it: about 1.3 GB unpacked ([gates](../../docs/gates.md#measured-on-2026-11-06)).
+- `golangci-lint run` reports unformatted files itself, so Go's gates need no separate format step.
 
 ## Assumptions to verify
 

@@ -84,3 +84,17 @@ services:
       - sh
       - -c
       - ruff check && ruff format --check && mypy && pytest -p no:cacheprovider
+
+  # Rewrites a Python project's uv.lock after its dependencies change, then rebuild its checks:
+  #   docker compose run --rm python-lock bench
+  #   docker compose run --rm python-lock backends/python-fastapi
+  python-lock:
+    build:
+      context: backends/python-fastapi
+      target: base
+    profiles: [tools]
+    volumes:
+      - ./backends/python-fastapi:/work/backends/python-fastapi
+      - ./bench:/work/bench
+    working_dir: /work
+    entrypoint: ["uv", "lock", "--directory"]

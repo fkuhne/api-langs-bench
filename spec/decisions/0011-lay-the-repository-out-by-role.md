@@ -1,6 +1,6 @@
 # 0011. Lay the repository out by role
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-06
 
 ## Context
@@ -29,6 +29,7 @@ The repository is laid out by role:
 | `.env.example` | Every setting, with its default | 1.2 |
 
 - **Go's folder** is `backends/go/` until its framework is picked in step 1.4, when it's renamed `go-<framework>`.
+- **Each backend listens on port 8000 in its own container,** and Compose publishes each on its own port on `127.0.0.1`, as the contract's `servers` entry says.
 - **Where runs are saved** is step 1.6's choice.
 - **The contract reaches each image** through a named build context: Compose's `additional_contexts`, as `contract`. The gates mount it read-only at `/contract`, so a backend finds its token file at the same path in every container.
 - **Step 1.2 creates small starting projects,** enough for the gates to run. The real code is steps 1.3 to 1.6.
@@ -50,7 +51,7 @@ The repository is laid out by role:
 
 ## Assumptions to verify
 
-- [ ] Compose's `additional_contexts` works the same on Docker Desktop, Colima and Linux. Checked on Colima in step 1.2; the others at the report's two machines (step 6.2).
+- [ ] Compose's `additional_contexts` works the same on Docker Desktop, Colima and Linux. Checked on Colima in step 1.2; the others at the report's two machines (step 6.2). *Colima, 2026-11-06: works with Compose 5.5.1 and Docker 29.5.2. The Python checks image holds `/contract` without a mount ([gates](../../docs/gates.md#measured-on-2026-11-06)).*
 
 ## Sources
 
