@@ -8,12 +8,13 @@ The same AI backend, written in several programming languages and measured on th
 
 Python and Go come first; Rust, Java, JavaScript and C++ follow. Fakes stand in for the LLM where its seconds would hide the backend's own cost.
 
-**Status:** starting. The spec is written; there's no code yet.
+**Status:** starting. The spec and the contract every backend implements are written; there's no code yet.
 
 ## Where to start
 
 - [`docs/benchmarking.md`](docs/benchmarking.md): the notes on benchmarking an AI backend: prior art, metrics, load tools and the upstreams, each claim with its source.
 - [`spec/product.md`](spec/product.md): what this project covers and what it doesn't.
+- [`contract/`](contract/README.md): the one API every backend implements, and how the fakes behave.
 - [`spec/plan.md`](spec/plan.md): the steps, in order. The next one is the first unticked.
 - [`spec/decisions/`](spec/decisions/README.md): why each choice was made.
 

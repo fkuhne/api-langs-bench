@@ -46,7 +46,7 @@ None yet. The first arrive in plan step 1.2, with the repository's layout and th
 - **Pin dependencies to exact versions,** with a lockfile.
 - **Nothing large in git.** Models, datasets and checkpoints stay out of it. Report disk use after a step that writes data.
 - **No money is spent without a record:** hardware, rented compute and paid APIs.
-- **One contract for every backend** ([0003](spec/decisions/0003-every-backend-implements-ai-bootstraps-chat-api.md)). A change to it changes every backend and the conformance suite in the same commit.
+- **One contract for every backend,** in [`contract/`](contract/README.md) ([0003](spec/decisions/0003-every-backend-implements-ai-bootstraps-chat-api.md), [0010](spec/decisions/0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md)). A change to it changes every backend and the conformance suite in the same commit.
 - **Fair by construction:**
   - every backend is written as a competent engineer would, following its ecosystem's documented production set-up;
   - none is tuned alone;

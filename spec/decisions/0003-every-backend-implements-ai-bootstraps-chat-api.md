@@ -1,6 +1,6 @@
 # 0003. Every backend implements ai-bootstrap's chat API
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-06
 
 ## Context
@@ -16,7 +16,7 @@ The owner's focus is the backend for AI: chat, streaming and their metrics. Logi
 
 Every backend implements one contract, taken from ai-bootstrap's chat: the two endpoints, the body, the stream's events, the readiness check and the errors. Stateless, and text only. Conversations come later, in version 1's last backend phase ([0005](0005-conversations-on-postgresql-as-version-1s-last-backend-phase.md)).
 
-The contract is written down once, in this repository. Every backend is checked against it by one conformance suite. What to keep of ai-bootstrap's API, such as the `reasoning` events and the free `parameters`, is plan step 1.1.
+The contract is written down once, in this repository: [`contract/`](../../contract/README.md), shaped by [0010](0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md) at plan step 1.1. Every backend is checked against it by one conformance suite.
 
 ## Alternatives considered
 
@@ -35,7 +35,7 @@ The contract is written down once, in this repository. Every backend is checked 
 ## Assumptions to verify
 
 - [ ] The contract can be written precisely enough that every backend's events match, field for field.
-- [ ] ai-bootstrap's free `parameters` don't make the backends do different work. If they do, the contract fixes them.
+- [ ] ai-bootstrap's free `parameters` don't make the backends do different work. If they do, the contract fixes them. *The contract settles it by a rule: a backend passes them on unchanged and doesn't read them ([contract](../../contract/README.md#the-request)). The conformance suite checks it from step 1.5.*
 
 ## Sources
 

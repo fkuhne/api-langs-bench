@@ -1,6 +1,6 @@
 # 0010. The contract: ai-bootstrap's chat in text, paced fakes, and OpenAPI 3.2
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-06
 
 ## Context
@@ -46,6 +46,13 @@ The contract is ai-bootstrap's stateless chat, cut to text. Both fakes make a fi
 - **The pace:** `FAKE_FIRST_TOKEN_MS` and `FAKE_TOKEN_GAP_MS`. Token *i* is due at `start + first + i × gap`. The fake waits for that time instead of sleeping a gap after each token, so delays don't add up.
 - **The whole answer** comes when its last token would have.
 - **Errors on request:** a `fake_error` parameter, such as `{"status": 503, "after_tokens": 2}`, makes the fake fail after that many tokens. The backend passes it through like any other parameter, so the fake server obeys it too.
+
+**Defaults,** set while writing the contract:
+- **`LLM_PROVIDER` defaults to `fake`,** unlike ai-bootstrap, whose default is `openai-compatible`. Until Phase 2, the in-process fake is the only upstream, and a setting needs a default that works.
+- **The fakes answer as fast as they can by default:** 256 answer tokens, no reasoning, and no wait. The workloads set the pace (step 3.2).
+- **`max_tokens` cuts the answer only.** `completion_tokens` counts the reasoning as well.
+- **A malformed `fake_error`** fails at once with 502, as an upstream refuses a parameter it doesn't accept.
+- **`prompt_tokens` counts words** separated by spaces, tabs, line feeds and carriage returns only. That way every language counts the same words.
 
 **The form:**
 - **`contract/openapi.yaml`:** OpenAPI 3.2, written by hand. It describes the endpoints, the bodies, and each event's data.
@@ -97,3 +104,9 @@ The contract is ai-bootstrap's stateless chat, cut to text. Both fakes make a fi
 - [The OpenAPI 3.2.0 specification](https://spec.openapis.org/oas/v3.2.0.html), §4.14.4, "Special Considerations for Server-Sent Events", and the example "Server-Sent Event Streams". Read on 2026-11-06.
 - On Redocly CLI and OpenAPI 3.2: [OpenApi.tools](https://openapi.tools/tools/redocly-cli/), and [a mirror of its README](https://awesome.ecosyste.ms/projects/github.com%2Fredocly%2Fredocly-cli). Read on 2026-11-06.
 - The owner's picks, 2026-11-06.
+- **A one-off check of `contract/`,** run with a throwaway script on 2026-11-06 (Python 3.10.16, PyYAML 6.0.2, jsonschema 4.26.0, on the owner's Mac). Docker wasn't running, so it isn't the lint of step 1.2. It found that:
+  - all 29 `$ref`s resolve;
+  - the 15 schemas and the stream's `itemSchema` are valid JSON Schema 2020-12;
+  - 12 requests, valid and invalid, are told apart, the reserved keys and content parts included;
+  - the page's examples match the schemas, and the fake's rules rebuild them;
+  - an unknown event, an error status of 500 and an empty token are refused.
