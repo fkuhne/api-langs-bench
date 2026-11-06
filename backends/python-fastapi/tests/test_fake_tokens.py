@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.fake_tokens import load_tokens
+from app.fake.tokens import load_tokens
 
 
 def test_the_contracts_tokens_load_in_order() -> None:

@@ -24,7 +24,7 @@ The Python backend is written fresh from the contract, taking the pieces of ai-b
   - liveness and readiness.
 
   There's no module system, no users, and no `/api/llm/model`.
-- **The pins** are ai-bootstrap's: FastAPI 0.143.0, uvicorn 0.54.0 with `[standard]`, pydantic-settings 2.15.0. The tests add httpx 0.28.1.
+- **The pins** are ai-bootstrap's: FastAPI 0.143.0, uvicorn 0.54.0 with `[standard]`, pydantic-settings 2.15.0. The tests add httpx2 2.13.1, as ai-bootstrap: Starlette 1.x deprecates plain httpx in its test client.
 - **The fake** follows the contract: tokens from the file, deadlines on the event loop's clock, and `fake_error`. Its clock can be swapped, so the tests check its timing exactly.
 - **The run:** one process, with uvicorn's defaults, its access log included. Workers, the access log and other run-time settings are step 3.1's fairness rule, the same for every backend.
 - **FastAPI's served docs are off** (`/docs`, `/openapi.json`), since the contract drops them.
