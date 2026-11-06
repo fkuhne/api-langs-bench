@@ -34,3 +34,4 @@ Don't rewrite a record to change its decision. Write a new record and mark the o
 | [0011](0011-lay-the-repository-out-by-role.md) | Lay the repository out by role | Accepted | 2026-11-06 |
 | [0012](0012-write-the-evaluation-tool-in-python-apart-from-the-load-generator.md) | Write the evaluation tool in Python, apart from the load generator | Accepted | 2026-11-06 |
 | [0013](0013-gates-equally-strict-for-every-language.md) | Gates equally strict for every language | Accepted | 2026-11-06 |
+| [0014](0014-the-python-backend-fresh-from-the-contract-on-uvicorn-standard-and-fastapis-sse.md) | The Python backend: fresh from the contract, on uvicorn[standard] and FastAPI's SSE | Proposed | 2026-11-06 |
