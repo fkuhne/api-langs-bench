@@ -150,6 +150,7 @@ What we keep of it is in [`contract/`](../contract/README.md), and why is in [00
 ## Docker and the numbers
 
 - **Docker Desktop** on macOS and Windows runs containers inside a Linux VM. *Unchecked.*
+- **Timers in Docker's VM:** on Colima on the owner's M3, a 20 ms sleep in a container wakes 6.8 ms late at the median and 11.2 ms late at p99 (our run, 2026-11-06, [backends](backends.md#timers-in-dockers-vm-on-this-mac)).
 - **Docker's CPU limits:** `--cpus` limits a share of CPU time, and `--cpuset-cpus` pins a container to cores. *Unchecked.* Which one we use is plan step 3.1.
 
 ## Open questions

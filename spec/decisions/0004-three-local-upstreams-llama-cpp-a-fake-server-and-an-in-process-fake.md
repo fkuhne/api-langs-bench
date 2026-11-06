@@ -39,7 +39,7 @@ Two rules keep them fair:
 ## Assumptions to verify
 
 - [ ] The fake server reaches a rate well above every backend's ceiling on the same machine.
-- [ ] Each language's timers keep the fakes' pace accurately at the gaps we use.
+- [ ] Each language's timers keep the fakes' pace accurately at the gaps we use. *2026-11-06: Python keeps the average pace (a median gap of 19.5 ms against 20). But in Colima's VM on the owner's M3, every wait wakes 7 to 11 ms late, Python's or not: a bare `time.sleep(0.02)` wakes 6.8 ms late at the median ([backends](../../docs/backends.md#timers-in-dockers-vm-on-this-mac)). That's the machine's error, not a language's.*
 - [ ] llama.cpp's stream can be imitated closely enough that a backend's code can't tell the fake server from it.
 
 ## Sources

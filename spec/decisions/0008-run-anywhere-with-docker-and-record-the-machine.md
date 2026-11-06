@@ -35,6 +35,7 @@ Numbers from different machines can't be compared, and a backend's numbers depen
 
 - [ ] Docker's CPU limits hold each backend to the same share on Docker Desktop as on Linux.
 - [ ] Docker's networking adds the same cost to every backend.
+- [ ] A machine's timers are tight enough for paced fakes. *Not on Colima on the owner's M3, 2026-11-06: a 20 ms sleep wakes 6.8 ms late at the median and 11.2 ms late at p99, in a bare container ([backends](../../docs/backends.md#timers-in-dockers-vm-on-this-mac)). Each run should measure its machine's timer error and record it with the machine.*
 
 ## Sources
 
