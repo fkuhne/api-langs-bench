@@ -1,0 +1,86 @@
+[project]
+name = "bench"
+version = "0.1.0"
+description = "The evaluation tool: the conformance suite, the runner and the analysis (spec/decisions/0012)."
+requires-python = ">=3.14,<3.15"
+# Reading the contract. The conformance suite (step 1.5) and the runner (step 1.6) add theirs.
+dependencies = [
+    "jsonschema==4.26.0",
+    "pyyaml==6.0.3",
+    "referencing==0.37.0",
+]
+
+[dependency-groups]
+# The gates, as in ai-bootstrap, with the same pins (spec/decisions/0013).
+dev = [
+    "mypy==2.4.0",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "ruff==0.16.10",
+    "types-jsonschema==4.26.0.20261006",
+    "types-pyyaml==6.0.12.20260906",
+]
+
+[tool.uv]
+# An app, not a library: uv installs its dependencies, not the project itself.
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=bench",
+    "--cov-report=term-missing",
+    "--cov-fail-under=90",
+]
+# A warning fails its test: a leak or a deprecation is fixed, not scrolled past.
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["bench"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # flake8-bugbear
+    "UP",       # pyupgrade
+    "SIM",      # flake8-simplify
+    "N",        # pep8-naming
+    "S",        # flake8-bandit (security)
+    "ASYNC",    # flake8-async
+    "PT",       # flake8-pytest-style
+    "C4",       # flake8-comprehensions
+    "RET",      # flake8-return
+    "PTH",      # flake8-use-pathlib
+    "TID",      # flake8-tidy-imports
+    "ARG",      # flake8-unused-arguments
+    "RUF",      # Ruff-specific rules
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",  # pytest uses assert
+    "ARG",   # test doubles implement interfaces whose arguments they don't need
+]
+
+[tool.mypy]
+strict = true
+files = ["bench", "tests"]

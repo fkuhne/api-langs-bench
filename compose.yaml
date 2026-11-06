@@ -63,3 +63,24 @@ services:
         && go tool cover -func=/tmp/cover.out
         | awk '/^total:/ { sub("%", "", $$3); print "coverage: " $$3 "%";
         if ($$3 + 0 < 90) { print "below 90%"; exit 1 } }'
+
+  # The evaluation tool's gates: docker compose run --rm bench-checks
+  # After a dependency changes, run `docker compose build bench-checks` first.
+  bench-checks:
+    build:
+      context: bench
+      target: dev
+      additional_contexts:
+        contract: contract
+    profiles: [tools]
+    volumes:
+      - ./bench:/app:ro
+      - ./contract:/contract:ro
+    environment:
+      COVERAGE_FILE: /tmp/.coverage
+      MYPY_CACHE_DIR: /tmp/.mypy_cache
+      RUFF_CACHE_DIR: /tmp/.ruff_cache
+    command:
+      - sh
+      - -c
+      - ruff check && ruff format --check && mypy && pytest -p no:cacheprovider
