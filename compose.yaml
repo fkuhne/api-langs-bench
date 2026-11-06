@@ -1,11 +1,42 @@
 # api-langs-bench: every service, the gates included (spec/decisions/0011).
 #
+# A backend starts with: docker compose up -d --wait <name>
 # The gates are tools, run one at a time: docker compose run --rm <name>-checks
-# Each mounts its source read-only, so it checks the current code; caches go to /tmp.
+# Each gate mounts its source read-only, so it checks the current code; caches go to /tmp.
 
 name: api-langs-bench
 
+# The contract's settings, the same for every backend (contract/README.md#settings).
+x-backend-environment: &backend-environment
+  LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+  FAKE_ANSWER_TOKENS: ${FAKE_ANSWER_TOKENS:-256}
+  FAKE_REASONING_TOKENS: ${FAKE_REASONING_TOKENS:-0}
+  FAKE_FIRST_TOKEN_MS: ${FAKE_FIRST_TOKEN_MS:-0}
+  FAKE_TOKEN_GAP_MS: ${FAKE_TOKEN_GAP_MS:-0}
+
 services:
+  # The Python backend: FastAPI on uvicorn (spec/decisions/0014).
+  python-fastapi:
+    build:
+      context: backends/python-fastapi
+      target: runtime
+      additional_contexts:
+        contract: contract
+    environment: *backend-environment
+    ports:
+      - 127.0.0.1:${PYTHON_FASTAPI_PORT:-8001}:8000
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/ready', timeout=4)
+      start_period: 30s
+      start_interval: 1s
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The contract's lint: docker compose run --rm contract-checks
   contract-checks:
     image: redocly/cli:2.69.0
