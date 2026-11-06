@@ -1,0 +1,15 @@
+# Go's gates (spec/decisions/0013): golangci-lint's standard linters, plus those that match the
+# Python backends' ruff families.
+version: "2"
+linters:
+  default: standard
+  enable:
+    - bodyclose # HTTP response bodies are closed
+    - errorlint # errors are wrapped and compared as Go means since 1.13
+    - gosec # security, as ruff's S
+    - noctx # HTTP requests carry a context
+    - revive # names and doc comments, as ruff's N
+formatters:
+  enable:
+    - gofmt
+    - goimports

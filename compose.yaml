@@ -37,3 +37,29 @@ services:
       - sh
       - -c
       - ruff check && ruff format --check && mypy && pytest -p no:cacheprovider
+
+  # The Go backend's gates: docker compose run --rm go-checks
+  # golangci-lint also reports unformatted files (gofmt, goimports). Go has no coverage minimum
+  # of its own: the awk line fails below 90%, as the Python gates do.
+  go-checks:
+    build:
+      context: backends/go
+      target: dev
+      additional_contexts:
+        contract: contract
+    profiles: [tools]
+    volumes:
+      - ./backends/go:/src:ro
+      - ./contract:/contract:ro
+    environment:
+      GOCACHE: /tmp/go-build
+      GOLANGCI_LINT_CACHE: /tmp/golangci-lint
+    command:
+      - sh
+      - -c
+      - >-
+        golangci-lint run
+        && go test -race -shuffle=on -covermode=atomic -coverprofile=/tmp/cover.out ./...
+        && go tool cover -func=/tmp/cover.out
+        | awk '/^total:/ { sub("%", "", $$3); print "coverage: " $$3 "%";
+        if ($$3 + 0 < 90) { print "below 90%"; exit 1 } }'
