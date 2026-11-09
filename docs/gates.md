@@ -13,7 +13,7 @@ Each part of the repository has gates: checks that fail on a mistake, run in Doc
 
 Each checks service mounts its folder and `contract/` read-only, so it checks the current files. After a dependency changes:
 - **Python:** `docker compose run --rm python-lock <folder>`, such as `bench`, rewrites the folder's `uv.lock`. Then `docker compose build <name>-checks`.
-- **Go:** step 1.4 adds the command with the first dependency.
+- **Go:** `docker compose run --rm go-mod tidy` rewrites `backends/go/`'s `go.mod` and `go.sum`, after a `require` line changes. Then `docker compose build go-checks`.
 
 ## Measured on 2026-11-06
 

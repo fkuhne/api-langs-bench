@@ -44,6 +44,7 @@ Every command is a Docker command, the same in PowerShell, cmd and POSIX shells.
 - `docker compose run --rm go-checks` runs the Go backends' gates: golangci-lint, then `go test -race` with 90% coverage.
 - `docker compose run --rm bench-checks` runs the evaluation tool's gates, the same as the Python backend's.
 - `docker compose run --rm python-lock <folder>`, such as `bench`, rewrites a Python project's `uv.lock` after its dependencies change. Rebuild its checks afterwards, with `docker compose build <name>-checks`.
+- `docker compose run --rm go-mod tidy` does the same for the Go module, after a `require` line in `backends/go/go.mod` changes. Rebuild `go-checks` afterwards.
 
 ## Conventions
 
