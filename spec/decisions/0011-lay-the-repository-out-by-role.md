@@ -1,6 +1,6 @@
 # 0011. Lay the repository out by role
 
-- Status: Accepted
+- Status: Accepted; its rule for Go's folder is superseded by [0016](0016-two-go-backends-net-http-and-gin-in-one-module.md)
 - Date: 2026-11-06
 
 ## Context
@@ -52,6 +52,10 @@ The repository is laid out by role:
 ## Assumptions to verify
 
 - [ ] Compose's `additional_contexts` works the same on Docker Desktop, Colima and Linux. Checked on Colima in step 1.2; the others at the report's two machines (step 6.2). *Colima, 2026-11-06: works with Compose 5.5.1 and Docker 29.5.2. The Python checks image holds `/contract` without a mount ([gates](../../docs/gates.md#measured-on-2026-11-06)).*
+
+## Why it was partly superseded
+
+On 2026-11-09 Go got two backends, on `net/http` and on Gin, sharing one module ([0016](0016-two-go-backends-net-http-and-gin-in-one-module.md)). Its folder stays `backends/go/`, holding both, rather than being renamed after one framework. The rest of this record stands.
 
 ## Sources
 

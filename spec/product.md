@@ -2,7 +2,7 @@
 
 This is the source of truth for what the project covers and what it doesn't. A change of scope starts here, then flows into [`requirements.md`](requirements.md), [`plan.md`](plan.md) and the [decision records](decisions/README.md).
 
-> **Written 2026-11-06** from the owner's interview on 2026-11-05 and 2026-11-06. The owner picked the name and the licence on 2026-11-06 (step 0.2).
+> **Written 2026-11-06** from the owner's interview on 2026-11-05 and 2026-11-06. The owner picked the name and the licence on 2026-11-06 (step 0.2). On 2026-11-09, Go got two backends, on its standard library and on Gin ([0016](decisions/0016-two-go-backends-net-http-and-gin-in-one-module.md)).
 
 ## The problem
 
@@ -29,7 +29,7 @@ There's also a trap in measuring this naively. A real model's reply takes second
 ## What it is
 
 A benchmark, in a public GitHub repository, run with Docker Compose on any machine. It holds:
-- **Backends, one per programming language,** Python and Go first. Each implements the same API: [ai-bootstrap](https://github.com/fkuhne/ai-bootstrap)'s chat, as a whole answer or a stream of server-sent events, with its readiness check and its errors. In version 1's last phase, conversations stored in PostgreSQL too. Text only.
+- **Backends in several programming languages,** Python and Go first: one for Python, and two for Go, on its standard library and on a framework. Each implements the same API: [ai-bootstrap](https://github.com/fkuhne/ai-bootstrap)'s chat, as a whole answer or a stream of server-sent events, with its readiness check and its errors. In version 1's last phase, conversations stored in PostgreSQL too. Text only.
 - **Upstreams, picked by a setting,** the same for every backend:
   - **llama.cpp's server,** with one small model, pinned: the real thing, so we can see it work;
   - **a fake upstream server,** written once and shaped like llama.cpp's API. It streams fixed tokens at a set pace, so each backend's own cost shows, its HTTP client included;
@@ -62,7 +62,7 @@ A benchmark, in a public GitHub repository, run with Docker Compose on any machi
 ## Scope
 
 **Version 1:**
-- **Python and Go backends,** one framework each: FastAPI for Python, as in ai-bootstrap; the Go one is picked in a plan step.
+- **Python and Go backends:** FastAPI for Python, as in ai-bootstrap; for Go, its standard library's `net/http` and Gin, sharing everything but the HTTP layer ([0016](decisions/0016-two-go-backends-net-http-and-gin-in-one-module.md)).
 - **Stateless chat,** whole and streamed.
 - **All the upstreams:** the in-process fake, the fake server, llama.cpp on CPU, the remote imitation and Ollama Cloud.
 - **The evaluation tool,** with the workloads above, stream behaviour included.
@@ -73,7 +73,7 @@ A benchmark, in a public GitHub repository, run with Docker Compose on any machi
 
 **Next:**
 - **More languages:** Rust, Java, JavaScript and C++, one at a time, in an order picked then. An `add-language` skill, written from what Python and Go taught, makes each one routine.
-- **More than one framework or runtime per language,** such as FastAPI against Litestar, Go's standard library against a framework, or free-threaded Python.
+- **More than one framework or runtime per language,** such as FastAPI against Litestar, or free-threaded Python.
 - **The developer's side:** lines of code, dependencies, build time, and notes on what was hard in each language.
 - **The post,** on LinkedIn and X.
 
