@@ -37,6 +37,30 @@ services:
       timeout: 5s
       retries: 3
 
+  # The Go backend on net/http alone: docker compose up -d --wait go-nethttp
+  go-nethttp:
+    build:
+      context: backends/go
+      target: runtime
+      args:
+        SERVER: nethttp
+      additional_contexts:
+        contract: contract
+    environment: *backend-environment
+    ports:
+      - 127.0.0.1:${GO_NETHTTP_PORT:-8002}:8000
+    # The image has no shell, so the server asks itself (spec/decisions/0016).
+    healthcheck:
+      test:
+        - CMD
+        - /app/server
+        - healthcheck
+      start_period: 30s
+      start_interval: 1s
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The contract's lint: docker compose run --rm contract-checks
   contract-checks:
     image: redocly/cli:2.69.0
