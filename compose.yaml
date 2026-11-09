@@ -90,7 +90,7 @@ services:
       - -c
       - >-
         golangci-lint run
-        && go test -race -shuffle=on -covermode=atomic -coverprofile=/tmp/cover.out ./...
+        && go test -race -shuffle=on -covermode=atomic -coverpkg=./... -coverprofile=/tmp/cover.out ./...
         && go tool cover -func=/tmp/cover.out
         | awk '/^total:/ { sub("%", "", $$3); print "coverage: " $$3 "%";
         if ($$3 + 0 < 90) { print "below 90%"; exit 1 } }'
