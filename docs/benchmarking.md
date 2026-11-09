@@ -84,6 +84,8 @@ As summarised by a search on 2026-11-05, from NVIDIA's documentation and the DEV
 - **Vegeta** is open-loop.
 - **oha** is reported to have a `--latency-correction` flag. That rests on one blog post, unverified.
 
+- **A client that leaves may not close its connection at once.** Go 1.27.3's HTTP client, when a response's body is closed early, reads on for up to 50 ms or 256 KiB to reuse the connection, then closes it (`maxPostCloseReadTime`, in `net/http/transport.go`). A backend sees the client leave only then: 51 ms late, in our run ([backends](backends.md#go-nethttp)). The load generator that measures a client's leaving (plan step 3.3) must close its connection, such as with keep-alive off.
+
 *Sources:* k6's documentation, and search summaries of [a DEV post on coordinated omission](https://dev.to/speed_engineer/coordinated-omission-why-your-load-testing-tool-is-lying-about-your-p99-4p7k) and tool comparisons, 2026-11-05.
 
 ## The upstreams

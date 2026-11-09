@@ -42,6 +42,115 @@ Each backend serves [the contract](../contract/README.md) with its in-process fa
 
 **A client that leaves.** In a test, the client leaves a stream after two tokens, at a 20 ms gap, served by uvicorn over a real socket. The fake's stream is closed, and it made at most three more tokens, in 20 runs out of 20. FastAPI holds up to two events between the fake and the socket ([0014](../spec/decisions/0014-the-python-backend-fresh-from-the-contract-on-uvicorn-standard-and-fastapis-sse.md)). How fast this happens under load is plan step 3.3.
 
+## Go: net/http
+
+[`backends/go/`](../backends/go/), its routes in [`internal/nethttp/`](../backends/go/internal/nethttp/server.go), built in the first half of plan step 1.4 ([0016](../spec/decisions/0016-two-go-backends-net-http-and-gin-in-one-module.md)).
+
+**How it's set up:**
+- **Versions:** Go 1.27.3, with the standard library alone.
+- **Shared with the Gin backend:** the settings, the LLM port and its errors, the fake, and the start-up, in [`internal/`](../backends/go/internal/). So are the contract's checks, in [`internal/apitest/`](../backends/go/internal/apitest/apitest.go), which each server's tests run.
+- **The routes:** `ServeMux` with method patterns, and `encoding/json`. The stream's status and headers go as soon as the body is valid. Then each event is written by hand and flushed through `http.ResponseController`.
+- **The server:** an `http.Server` with a 10 s `ReadHeaderTimeout` and no write timeout. On SIGTERM it stops taking requests, and gives open ones 10 s.
+- **The image:** built with `CGO_ENABLED=0 GOOS=linux go build`, as [Docker's guide](https://docs.docker.com/guides/golang/build-images/) does. It runs on distroless's static Debian 13 image as `nonroot`, pinned by digest. Compose's healthcheck runs the binary's own `healthcheck` command, since the image has no shell.
+- **One process,** with Go's defaults, until plan step 3.1's rule. `net/http` writes no access log.
+- **Started with** `docker compose up -d --wait go-nethttp`, on `127.0.0.1:8002`.
+
+**Measured on 2026-11-09, beside the Python backend.** Both were measured in the same session, one after the other, on the machine named at the top of this page:
+
+| What | Python, FastAPI | Go, `net/http` | How |
+|---|---|---|---|
+| Image, unpacked | 180.5 MiB | 12.8 MiB | A container's `docker export`, in bytes. Step 1.3's 193 MiB was `du -sx /`, which counts disk blocks |
+| Image, compressed | 56.6 MB | 6.5 MB | `docker image inspect` |
+| Start-up | Ready 0.73 s after `docker compose up -d` began: median of 5, 0.68 to 0.74 | 0.17 s: 0.15 to 0.21 | The host polls `/api/health/ready` every 10 ms. Go's very first start, the image just built, took 1.15 s |
+| Idle memory | 44.7 MiB, 0.46% CPU, 6 tasks | 2.1 MiB, 0.00% CPU, 8 tasks | `docker stats --no-stream`, 8 s after the last start |
+| Liveness | Median 0.7 ms, then 0.6 ms | 0.5 ms, then 0.7 ms | 50 requests, each on a new connection, from a container on Compose's network, in two rounds |
+| Stream's headers | At 10 ms | At 4 ms | curl's `time_starttransfer`, with the first token due at 100 ms |
+| Gates | 72 tests, 100% coverage | 0 issues, 92.6% coverage of all of `backends/go/` | Each language's `-checks` service |
+
+**The answers match the contract's page, byte for byte.** The example request gets the contract's whole answer, and its stream to the byte, with `Cache-Control: no-cache`. A reserved key gets a 422. `fake_error` with 503 after one token gets one `token` event, then `error` with status 503. `encoding/json` writes `<` as `<` and `&` as `&`, as the contract's page says.
+
+**The pace,** with `FAKE_FIRST_TOKEN_MS=100` and `FAKE_TOKEN_GAP_MS=20`. Each cell is the median of ten streams of ten tokens, or of ten whole answers, in each of two rounds:
+
+| Backend | Measured from | First token (want 100 ms) | Gap (want 20 ms) | Whole answer (want 280 ms) |
+|---|---|---|---|---|
+| Python, FastAPI | The host | 111.9, then 113.3 ms | 20.4, then 19.3 ms | 291.4, then 290.2 ms |
+| Go, `net/http` | The host | 108.5, then 111.8 ms | 20.3, then 19.9 ms | 290.1, then 292.7 ms |
+| Python, FastAPI | A container on Compose's network | 108.6, then 115.5 ms | 19.8, then 19.2 ms | 291.0, then 293.0 ms |
+| Go, `net/http` | A container on Compose's network | 109.8, then 108.5 ms | 20.1, then 20.2 ms | 291.1, then 290.9 ms |
+
+- **On this machine, the pace can't tell the two apart.** Both carry the VM's late wake-ups, about 10 ms on the first token ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)). Go's timers don't escape them.
+- **Single gaps range from 0 to 45 ms** in both, around a 20 ms median: a late token is followed by a short gap.
+
+**A client that leaves.** In the shared test, the client leaves a stream after two tokens, at a 20 ms gap, served over a real socket. The fake made at most one more token, in 20 runs out of 20, against FastAPI's three. `net/http` cancels the request's context 0.2 ms after the client closes its connection, measured with a raw TCP client.
+
+**Go's own HTTP client leaves late.** When a response's body is closed early, Go 1.27.3's client reads on for up to 50 ms or 256 KiB, hoping to reuse the connection, and only then closes it (`maxPostCloseReadTime` and `maxPostCloseReadBytes`, in `net/http/transport.go`). Measured with it, the server's context was cancelled 51 ms after the client called `Close`. The test's client turns keep-alive off, so it closes its connection at once.
+
+<details>
+<summary>The pace probe, and how it was run</summary>
+
+```python
+"""Step 1.3's pace and liveness probe, for any backend: python paceprobe.py HOST PORT [LIVENESS]."""
+import http.client, json, statistics, sys, time
+
+HOST, PORT = sys.argv[1], int(sys.argv[2])
+LIVENESS = len(sys.argv) > 3
+BODY = json.dumps({"messages": [{"role": "user", "content": "Hi"}], "parameters": {"max_tokens": 10}})
+
+
+def event_name(line):
+    """The event's name, by the SSE rules: `event:`, then one optional space."""
+    name = line.rstrip(b"\r\n")[len(b"event:"):]
+    return name[1:] if name.startswith(b" ") else name
+
+
+def stream():
+    c = http.client.HTTPConnection(HOST, PORT); t0 = time.perf_counter()
+    c.request("POST", "/api/chat/stream", BODY, {"Content-Type": "application/json"})
+    r = c.getresponse(); times = []
+    while line := r.readline():
+        if line.startswith(b"event:") and event_name(line) == b"token":
+            times.append(time.perf_counter() - t0)
+    c.close(); return times
+
+
+def whole():
+    c = http.client.HTTPConnection(HOST, PORT); t0 = time.perf_counter()
+    c.request("POST", "/api/chat", BODY, {"Content-Type": "application/json"}); c.getresponse().read()
+    t = time.perf_counter() - t0; c.close(); return t
+
+
+def health():
+    c = http.client.HTTPConnection(HOST, PORT); t0 = time.perf_counter()
+    c.request("GET", "/api/health"); c.getresponse().read(); t = time.perf_counter() - t0; c.close(); return t
+
+
+stream(); whole(); health()  # warm up the connection path
+ttft, gaps, wholes = [], [], []
+for _ in range(10):
+    t = stream(); assert len(t) == 10, t
+    ttft.append(t[0]); gaps += [b - a for a, b in zip(t, t[1:])]; wholes.append(whole())
+ms = lambda xs: f"median {statistics.median(xs)*1000:.1f} ms, min {min(xs)*1000:.1f}, max {max(xs)*1000:.1f}"
+print(f"{HOST}:{PORT}, 10 streams of 10 tokens, 10 whole answers:")
+print("  time to first token (want 100):", ms(ttft))
+print("  gap between tokens (want 20):  ", ms(gaps), f"({len(gaps)} gaps)")
+print("  whole answer (want 280):       ", ms(wholes))
+if LIVENESS:
+    lives = [health() for _ in range(50)]
+    print("  liveness, 50 requests, new connection each:", ms(lives))
+```
+
+```sh
+FAKE_FIRST_TOKEN_MS=100 FAKE_TOKEN_GAP_MS=20 docker compose up -d --wait python-fastapi go-nethttp
+# From the host, through Colima's port forwarding:
+python3 -I paceprobe.py 127.0.0.1 8001
+python3 -I paceprobe.py 127.0.0.1 8002
+# From a container on Compose's network:
+docker run --rm -i --network api-langs-bench_default python:3.14.8-slim-trixie \
+  python - go-nethttp 8000 liveness < paceprobe.py
+```
+
+</details>
+
 ## Timers in Docker's VM on this Mac
 
 In a bare `python:3.14.8-slim-trixie` container, with no backend involved, each sleep of 20 ms, 200 times, wakes this much later than asked:

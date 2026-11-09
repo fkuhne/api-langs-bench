@@ -167,7 +167,7 @@ The backend passes `fake_error` on like any other parameter, so the fake server 
 
 The conformance suite (plan step 1.5) compares each backend's answers to the contract by these rules:
 - **Statuses and event names** must match exactly.
-- **JSON is compared after parsing.** Key order, white space and how characters are escaped don't count; Go writes `<` as `<` by default (from memory, unchecked). A field that is null may be left out.
+- **JSON is compared after parsing.** Key order, white space and how characters are escaped don't count; Go's `encoding/json` writes `<` as `\u003c` by default (our run, 2026-11-09). A field that is null may be left out.
 - **Token texts** must match exactly, event by event.
 - **A `detail`** is never compared, only its presence.
 
