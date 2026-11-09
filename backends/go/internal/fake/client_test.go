@@ -242,7 +242,7 @@ func TestPromptTokensCountWordsSplitOnlyOnASCIISpace(t *testing.T) {
 	client, _ := fakeWith(t, nil)
 	messages := []llm.Message{
 		{Role: llm.RoleSystem, Content: "  one\ttwo\r\nthree  "},
-		{Role: llm.RoleUser, Content: "four still-four five"},
+		{Role: llm.RoleUser, Content: "four\u00a0still-four five"},
 	}
 
 	whole, err := client.Complete(context.Background(), messages, nil)

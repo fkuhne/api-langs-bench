@@ -58,9 +58,9 @@ Go gets two backends in version 1: one on the standard library's `net/http`, one
 
 ## Assumptions to verify
 
-- [ ] In both servers, a client that leaves cancels the request's context, and the fake stops within one token's gap. Checked by a test in this step; measured under load in plan step 3.3.
+- [ ] In both servers, a client that leaves cancels the request's context, and the fake stops within one token's gap. Checked by a test in this step; measured under load in plan step 3.3. *net/http, 2026-11-09: at most one more token, in 20 runs out of 20; the context is cancelled 0.2 ms after the client closes its connection. Go's own HTTP client closes it up to 50 ms late, so the test turns its keep-alive off ([backends](../../docs/backends.md#go-nethttp)).*
 - [ ] `GIN_MODE=release`, the logger and the recovery are what Gin's documentation shows for production. To check in this step.
-- [ ] `encoding/json` writes `<` as `<`, as the contract's page says from memory. To check in this step.
+- [x] `encoding/json` writes `<` as `\u003c`, as the contract's page says from memory. To check in this step. *2026-11-09: it does, and `&` as `\u0026` ([backends](../../docs/backends.md#go-nethttp)).*
 
 ## Sources
 

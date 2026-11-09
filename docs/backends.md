@@ -67,7 +67,7 @@ Each backend serves [the contract](../contract/README.md) with its in-process fa
 | Stream's headers | At 10 ms | At 4 ms | curl's `time_starttransfer`, with the first token due at 100 ms |
 | Gates | 72 tests, 100% coverage | 0 issues, 92.6% coverage of all of `backends/go/` | Each language's `-checks` service |
 
-**The answers match the contract's page, byte for byte.** The example request gets the contract's whole answer, and its stream to the byte, with `Cache-Control: no-cache`. A reserved key gets a 422. `fake_error` with 503 after one token gets one `token` event, then `error` with status 503. `encoding/json` writes `<` as `<` and `&` as `&`, as the contract's page says.
+**The answers match the contract's page, byte for byte.** The example request gets the contract's whole answer, and its stream to the byte, with `Cache-Control: no-cache`. A reserved key gets a 422. `fake_error` with 503 after one token gets one `token` event, then `error` with status 503. `encoding/json` writes `<` as `\u003c` and `&` as `\u0026`, as the contract's page says.
 
 **The pace,** with `FAKE_FIRST_TOKEN_MS=100` and `FAKE_TOKEN_GAP_MS=20`. Each cell is the median of ten streams of ten tokens, or of ten whole answers, in each of two rounds:
 
