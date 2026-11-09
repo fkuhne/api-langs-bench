@@ -129,6 +129,10 @@ services:
     volumes:
       - ./backends/go:/src:ro
       - ./contract:/contract:ro
+      # Go's build cache and golangci-lint's, kept between runs: without them, every run
+      # compiles Gin and its dependencies again, with the race detector.
+      - go-build-cache:/tmp/go-build
+      - golangci-lint-cache:/tmp/golangci-lint
     environment:
       GOCACHE: /tmp/go-build
       GOLANGCI_LINT_CACHE: /tmp/golangci-lint
@@ -188,3 +192,8 @@ services:
     volumes:
       - ./backends/go:/src
     entrypoint: ["go", "mod"]
+
+# Caches the gates keep between runs. `docker compose down --volumes` clears them.
+volumes:
+  go-build-cache:
+  golangci-lint-cache:

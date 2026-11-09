@@ -11,7 +11,7 @@ Each part of the repository has gates: checks that fail on a mistake, run in Doc
 | `docker compose run --rm go-checks` | [`backends/go/`](../backends/go/): `golangci-lint run` ([`.golangci.yml`](../backends/go/.golangci.yml): the standard linters, plus gosec, bodyclose, noctx, errorlint and revive, with gofmt and goimports), then `go test -race -shuffle=on`, failing below 90% coverage. Coverage counts every package's lines run by any package's tests (`-coverpkg=./...`), as pytest-cov counts the Python backend's; the shared contract tests in `internal/apitest` run from each server's tests | Go 1.27.3, golangci-lint 2.15.0 |
 | `docker compose run --rm bench-checks` | [`bench/`](../bench/): the Python backend's gates | As the Python backend, plus jsonschema 4.26.0, PyYAML 6.0.3 and referencing 0.37.0 |
 
-Each checks service mounts its folder and `contract/` read-only, so it checks the current files. After a dependency changes:
+Each checks service mounts its folder and `contract/` read-only, so it checks the current files. Go's checks also keep Go's build cache and golangci-lint's in two named volumes, so a run compiles only what changed; `docker compose down --volumes` clears them. After a dependency changes:
 - **Python:** `docker compose run --rm python-lock <folder>`, such as `bench`, rewrites the folder's `uv.lock`. Then `docker compose build <name>-checks`.
 - **Go:** `docker compose run --rm go-mod tidy` rewrites `backends/go/`'s `go.mod` and `go.sum`, after a `require` line changes. Then `docker compose build go-checks`.
 
@@ -45,3 +45,18 @@ That's about 4.7 GB in all, against 770 MB of compressed downloads. Unpacked, th
 - **Go, by accident:** gosec's G101 took the word "token" in a test's case name for a credential. The case was renamed; the rule stays on.
 
 **Compose's named build context** puts `contract/` in each image without a mount: `ls /contract` in the Python checks image lists its four files ([0011](../spec/decisions/0011-lay-the-repository-out-by-role.md)).
+
+## Measured on 2026-11-09
+
+On the same machine, after plan step 1.4 added the two Go backends and Gin's dependencies.
+
+**`go-checks`,** timed from the host, the checks image built:
+
+| Run | Time | Result |
+|---|---|---|
+| Cold: both cache volumes just removed | 81.4 s | 0 issues; 92.4% coverage |
+| Warm, then again | 11.2 s, then 5.1 s | The same |
+
+- **Why the caches:** before them, every run started with an empty build cache in `/tmp`, and compiled Gin and its dependencies with the race detector: 85 and 90 s for two warm runs.
+- **The modules are in the image.** The checks image had fetched them into a BuildKit cache mount, which never reaches the image, so each run downloaded them again. Now `go vet ./...` runs in it with networking off.
+- **Disk:** the build cache volume holds 492.8 MB, and golangci-lint's 0.7 MB. The checks image is 387 MB compressed.

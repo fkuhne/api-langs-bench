@@ -33,7 +33,8 @@ FROM base AS dev
 # Only the binary, as ai-bootstrap copies uv's.
 COPY --from=golangci/golangci-lint:v2.15.0 /usr/bin/golangci-lint /usr/bin/
 COPY go.mod go.sum* ./
-RUN --mount=type=cache,target=/go/pkg/mod go mod download
+# Into the image, not a build cache, so the checks find the modules without the network.
+RUN go mod download
 # The contract, from Compose's named build context (spec/decisions/0011). The checks also mount
 # it read-only at the same place, so they see the current file.
 COPY --from=contract . /contract/
