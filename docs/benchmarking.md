@@ -150,7 +150,12 @@ What we keep of it is in [`contract/`](../contract/README.md), and why is in [00
 ## Docker and the numbers
 
 - **Docker Desktop** on macOS and Windows runs containers inside a Linux VM. *Unchecked.*
-- **Timers in Docker's VM:** on Colima on the owner's M3, a 20 ms sleep in a container wakes 6.8 ms late at the median and 11.2 ms late at p99 (our run, 2026-11-06, [backends](backends.md#timers-in-dockers-vm-on-this-mac)).
+- **Timers in Docker's VM:** on Colima on the owner's M3, a 20 ms sleep in a container wakes 4 to 7 ms late at the median, and up to 13 ms at p99 (our runs, 2026-11-06 and 2026-11-09, [backends](backends.md#timers-in-dockers-vm-on-this-mac)).
+  - **The cause is the VM's idle virtual CPUs.** With all four kept busy, the same sleep wakes 0.07 ms late at the median.
+  - **So the VM can change how backends compare,** not only the absolute numbers: a backend that burns more CPU keeps the VM busier, and its paced fake runs closer to time (computed from these runs, not yet shown with two backends).
+  - **macOS's own sleeps** are 1 to 5 ms late, without Docker (our run, 2026-11-09).
+- **Docker on native Linux:** a container is a process on the host's kernel, with its CPU and timers. Docker's NAT adds latency at high packet rates, and host networking matches native ([Felter et al., IBM, 2014](https://www.read.seas.harvard.edu/~kohler/class/cs260r-s19/containerperf14.pdf), Redis's latency, read through [a review](https://souptikji.github.io/blog/2018/04/Containerization) and search summaries; unchecked against its tables).
+- **For us:** the report's timing numbers come from native Linux ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
 - **Docker's CPU limits:** `--cpus` limits a share of CPU time, and `--cpuset-cpus` pins a container to cores. *Unchecked.* Which one we use is plan step 3.1.
 
 ## Open questions
@@ -162,4 +167,3 @@ Questions the sources don't answer yet. Each moves into the notes, with its sour
 - Is Bifrost's benchmark harness published anywhere? If so, we could run its method.
 - Does a Python backend need several worker processes to compete fairly, and how does that fit a CPU limit (plan step 3.1)?
 - What does each ecosystem document as its production set-up: for Python, uvicorn's or Gunicorn's workers; for Go, `GOMAXPROCS` in a container (plan steps 1.3, 1.4 and 3.1)?
-- Does Docker Desktop's VM change how the backends compare, or only the absolute numbers?

@@ -23,7 +23,7 @@ The work, as small steps in order. Each step names the decision records it depen
 - [x] 1.2 **The repository's layout and the gates.** Where each backend, the evaluation tool and the fake server live, beside `contract/`; one Compose file, with the contract's settings in `.env.example`; each language's gates in Docker, and a lint of `contract/openapi.yaml`, falling back to OpenAPI 3.1 if no linter takes 3.2 ([0008](decisions/0008-run-anywhere-with-docker-and-record-the-machine.md), [0010](decisions/0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md)). *Picked:* the layout by role ([0011](decisions/0011-lay-the-repository-out-by-role.md)); the evaluation tool in Python, apart from the load generator ([0012](decisions/0012-write-the-evaluation-tool-in-python-apart-from-the-load-generator.md)); gates equally strict, golangci-lint for Go ([0013](decisions/0013-gates-equally-strict-for-every-language.md)). OpenAPI 3.2 lints, so no fallback to 3.1.
 - [x] 1.3 **The Python backend:** FastAPI, chat whole and streamed, readiness, errors, and the in-process fake. *Picked* ([0014](decisions/0014-the-python-backend-fresh-from-the-contract-on-uvicorn-standard-and-fastapis-sse.md)): written fresh from the contract with ai-bootstrap's pieces that fit, on `uvicorn[standard]` and FastAPI's own SSE.
 - [ ] 1.4 **The Go backend:** the same API and fake, in `backends/go/`, renamed after its framework. *Choice:* the standard library's `net/http`, or a framework such as chi, Gin, Echo or Fiber.
-- [ ] 1.5 **The conformance suite:** every backend answers the same requests the same way, and its fake keeps the contract's pace.
+- [ ] 1.5 **The conformance suite:** every backend answers the same requests the same way, and its fake keeps the contract's pace, within a tolerance taken from a measurement of the machine's timers ([0015](decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
 - [ ] 1.6 **The first runner:** one workload at a fixed arrival rate, open-loop; latency and errors; each run saved once as JSON, with the machine it ran on. The load generator is measured on its own first. *Choice:* an existing load tool, such as k6, vegeta, oha or wrk2, or a client of our own.
 - [ ] 1.7 **CI:** each language's gates, and the conformance suite against the in-process fakes, on every push.
 - [ ] 1.8 **The first numbers:** both backends, under the same limits, written down in `docs/` with the command, the settings and the machine.
@@ -62,7 +62,7 @@ The work, as small steps in order. Each step names the decision records it depen
 ## Phase 6: The web UI and the report
 
 - [ ] 6.1 **The web UI:** the runs, one run, and the backends compared with charts; starting a run through the same runner, and staying quiet during it ([0007](decisions/0007-a-web-ui-that-runs-the-benchmark-and-shows-its-results.md)). *Choices:* its stack; how it starts a run.
-- [ ] 6.2 **The first full run and the report:** every number with its run and its machine, run on two machines.
+- [ ] 6.2 **The first full run and the report:** every number with its run and its machine, run on two machines. The timing numbers come from native Linux ([0015](decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
 
 ## Next
 

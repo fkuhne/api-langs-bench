@@ -51,9 +51,68 @@ In a bare `python:3.14.8-slim-trixie` container, with no backend involved, each 
 | `time.sleep(0.02)` | 6.84 ms | 10.54 | 11.20 | 13.93 |
 | `asyncio.sleep(0.02)` | 7.15 ms | 10.53 | 10.82 | 10.85 |
 
-The VM's kernel runs tickless (`CONFIG_NO_HZ_FULL=y`), on the `arch_sys_counter` clock source. Why its sleeps wake late wasn't looked into.
+The VM's kernel runs tickless (`CONFIG_NO_HZ_FULL=y`), on the `arch_sys_counter` clock source.
 
-**What it means for the benchmark:**
-- **On this machine,** a paced fake's own error, about 7 to 11 ms per wait, is larger than what a backend adds to a token. Any language's fake will carry it.
-- **The conformance suite's timing check** (plan step 1.5) needs a tolerance this wide here, or it checks the average pace.
-- **Runs that time the stream** (plan steps 3.1 and 3.3) need a machine whose timers are tighter, such as native Linux, or have to subtract each run's measured timer error. [0008](../spec/decisions/0008-run-anywhere-with-docker-and-record-the-machine.md) records this as an assumption to check.
+### Where the delay comes from
+
+Measured on 2026-11-09, on the same machine. Colima runs its VM on Apple's Virtualization.framework (`vmType: vz`), with 4 virtual CPUs. The probe below sleeps 20 ms 200 times, each way, and prints how much later than asked each sleep woke. The busy loops are shell loops (`while :; do :; done`) started beside it.
+
+| Where | Sleep | Median | p90 | p99 | Max |
+|---|---|---|---|---|---|
+| A container, the VM idle | `time.sleep` | 4.39 ms | 6.11 | 6.44 | 6.54 |
+| | `asyncio.sleep` | 5.31 ms | 6.14 | 12.97 | 15.54 |
+| A container, 1 busy loop beside it | `time.sleep` | 5.07 ms | 6.03 | 6.16 | 6.17 |
+| | `asyncio.sleep` | 5.25 ms | 5.70 | 6.10 | 6.22 |
+| A container, 4 busy loops beside it | `time.sleep` | 0.07 ms | 0.09 | 2.32 | 2.69 |
+| | `asyncio.sleep` | 0.08 ms | 0.11 | 3.21 | 5.02 |
+| macOS itself, no Docker (Python 3.10.16) | `time.sleep` | 4.24 ms | 5.06 | 15.47 | 15.92 |
+| | `asyncio.sleep` | 1.20 ms | 1.33 | 7.45 | 11.22 |
+| macOS itself, 1 busy loop beside it | `time.sleep` | 5.00 ms | 5.01 | 5.01 | 5.02 |
+| | `asyncio.sleep` | 1.02 ms | 1.04 | 1.07 | 1.08 |
+
+- **The cause is the VM's idle virtual CPUs.** While a virtual CPU has nothing to run, it sleeps on macOS, and macOS wakes it late. With all four kept busy, a sleep wakes within 0.1 ms at the median.
+- **The idle VM's delay varies by day:** 6.84 ms at the median on 2026-11-06, 4.39 ms on 2026-11-09.
+- **macOS's own sleeps are late too,** by 1 to 5 ms. The flat 5.00 ms looks like timer slack that macOS adds on purpose (unchecked).
+
+<details>
+<summary>The probe, and how it was run</summary>
+
+```python
+import asyncio, statistics, time
+
+N, GAP = 200, 0.02
+
+def summary(name, late):
+    late = sorted(x * 1000 for x in late)
+    q = lambda p: late[min(len(late) - 1, int(p * len(late)))]
+    print(f"{name:22} median {statistics.median(late):6.2f}  p90 {q(0.90):6.2f}  p99 {q(0.99):6.2f}  max {late[-1]:6.2f} ms")
+
+late = []
+for _ in range(N):
+    t = time.perf_counter(); time.sleep(GAP); late.append(time.perf_counter() - t - GAP)
+summary("time.sleep(0.02)", late)
+
+async def main():
+    late = []
+    for _ in range(N):
+        t = time.perf_counter(); await asyncio.sleep(GAP); late.append(time.perf_counter() - t - GAP)
+    summary("asyncio.sleep(0.02)", late)
+asyncio.run(main())
+```
+
+In a container, with `$spin` busy loops beside it (0, 1 or 4):
+
+```sh
+docker run --rm -i python:3.14.8-slim-trixie \
+  sh -c "for i in \$(seq 1 $spin); do (while :; do :; done) & done; python -I -" < sleepprobe.py
+```
+
+On macOS itself: `python3 -I sleepprobe.py`.
+
+</details>
+
+**What it means for the benchmark** ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)):
+- **On this machine,** a paced fake's own error, about 4 to 11 ms per wait, is larger than what a backend adds to a token. Any language's fake will carry it.
+- **The error shrinks as the load grows.** A backend that burns more CPU keeps the virtual CPUs busier, so its fake keeps closer to the pace. Subtracting a measured error can't correct that.
+- **The conformance suite's timing check** (plan step 1.5) takes its tolerance from a measurement of the machine's timers.
+- **The report's timing numbers come from native Linux.** This Mac is for building, the gates, and the numbers that don't depend on timers.
