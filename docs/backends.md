@@ -151,6 +151,49 @@ docker run --rm -i --network api-langs-bench_default python:3.14.8-slim-trixie \
 
 </details>
 
+## Go: Gin
+
+[`backends/go/`](../backends/go/), its routes in [`internal/ginserver/`](../backends/go/internal/ginserver/server.go), built in the second half of plan step 1.4 ([0016](../spec/decisions/0016-two-go-backends-net-http-and-gin-in-one-module.md)). It shares everything but its routes with the `net/http` backend, and passes the same contract checks.
+
+**How it's set up:**
+- **Versions:** Gin v1.12.0, on Go 1.27.3. Its JSON is `encoding/json`, Gin's default without build tags.
+- **The routes:** `gin.Default()`, with Gin's logger and recovery. The router trusts no proxy, as Gin's warning asks, since none stands in front of it. Requests are bound with `ShouldBindJSON` and `binding` tags, checked by go-playground's validator. Answers are written with `c.JSON`.
+- **The stream:** the status and headers go as soon as the body is valid. Then each event is written with `c.SSEvent`, and flushed. Gin writes `event:token` and `data:{…}`, with no space after the colon, which the SSE standard allows.
+- **Release mode:** `GIN_MODE=release`, set in the image, as Gin's own warning asks for production. Gin's deployment page lists the variable without recommending a mode.
+- **The access log:** Gin's logger writes a line per request to stdout, as uvicorn does. `net/http` writes none. All three keep their defaults until plan step 3.1's rule.
+- **The binary** is 28.7 MiB, against `net/http`'s 9.6 MiB. Gin links every codec it can bind or render, used or not: YAML, TOML, protobuf, msgpack and BSON. It also links HTTP/3's quic-go (`go version -m`).
+- **The image, the server and the healthcheck** are the `net/http` backend's.
+- **Started with** `docker compose up -d --wait go-gin`, on `127.0.0.1:8003`.
+
+**Measured on 2026-11-09, beside the other two.** All three were measured in one session, after the `net/http` backend's table above:
+
+| What | Python, FastAPI | Go, `net/http` | Go, Gin | How |
+|---|---|---|---|---|
+| Image, unpacked | 180.5 MiB | 12.8 MiB | 31.9 MiB | A container's `docker export`, in bytes |
+| Image, compressed | 56.6 MB | 6.5 MB | 16.3 MB | `docker image inspect` |
+| Start-up | Ready 0.72 s after `docker compose up -d` began: median of 5, 0.69 to 0.96 | 0.18 s: 0.17 to 0.22 | 0.23 s: 0.18 to 0.30 | The host polls `/api/health/ready` every 10 ms |
+| Idle memory | 44.7 MiB, 1.48% CPU, 6 tasks | 2.0 MiB, 0.00% CPU, 8 tasks | 2.6 MiB, 0.00% CPU, 8 tasks | `docker stats --no-stream`, 8 s after the last start |
+| Liveness | Median 0.6 ms | 0.6 ms | 0.7 ms | 50 requests, each on a new connection, from a container on Compose's network |
+| Stream's headers | At 10 ms | At 5 ms | At 14 ms | curl's `time_starttransfer`, with the first token due at 100 ms |
+| A client that leaves | At most 3 more tokens | At most 1 | At most 1 | Each backend's test, 20 runs out of 20 |
+
+**The answers match the contract's page** once parsed, by its rules: the same JSON whole, and the same events, `event:token` written without a space. A reserved key and an unknown role get a 422, with the validator's message as the `detail`. `fake_error` with 503 after one token gets one `token` event, then `error` with status 503.
+
+**The pace,** with `FAKE_FIRST_TOKEN_MS=100` and `FAKE_TOKEN_GAP_MS=20`, measured with the probe above. Each cell is the median of ten streams of ten tokens, or of ten whole answers:
+
+| Backend | Measured from | First token (want 100 ms) | Gap (want 20 ms) | Whole answer (want 280 ms) |
+|---|---|---|---|---|
+| Python, FastAPI | The host | 117.2 ms | 19.9 ms | 293.4 ms |
+| Go, `net/http` | The host | 108.0 ms | 19.5 ms | 294.0 ms |
+| Go, Gin | The host | 113.6 ms | 19.0 ms | 291.3 ms |
+| Python, FastAPI | A container on Compose's network | 110.8 ms | 20.4 ms | 290.1 ms |
+| Go, `net/http` | A container on Compose's network | 108.4 ms | 20.1 ms | 287.1 ms |
+| Go, Gin | A container on Compose's network | 109.6 ms | 19.7 ms | 293.4 ms |
+
+**What these step checks show, on this machine:**
+- **Size, start-up and idle memory** set Go apart from Python by about ten times. Gin costs more than `net/http` in size, through its dependencies, and a little in memory and start-up.
+- **The pace and liveness don't set any of them apart here.** The VM's late wake-ups are larger than what each adds ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)). The benchmark's own runs start at plan step 1.6.
+
 ## Timers in Docker's VM on this Mac
 
 In a bare `python:3.14.8-slim-trixie` container, with no backend involved, each sleep of 20 ms, 200 times, wakes this much later than asked:

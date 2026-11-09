@@ -50,7 +50,7 @@ Both chat endpoints take the same JSON body, sent with `Content-Type: applicatio
 
 `POST /api/chat/stream` answers 200 once the body is valid. The headers are `Content-Type: text/event-stream` (a `charset` may follow) and `Cache-Control: no-cache`.
 
-**The wire format.** Each event is an `event:` line, one `data:` line holding JSON, and a blank line. Lines end with `\n`. No event has an `id:` or a `retry:`. For the request above, from the in-process fake:
+**The wire format.** Each event is an `event:` line, one `data:` line holding JSON, and a blank line. Lines end with `\n`. A space after a field's colon is optional, as the SSE standard allows: Gin writes `event:token`. No event has an `id:` or a `retry:`. For the request above, from the in-process fake:
 
 ```text
 event: token

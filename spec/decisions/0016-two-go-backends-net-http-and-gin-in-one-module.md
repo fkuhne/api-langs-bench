@@ -1,6 +1,6 @@
 # 0016. Two Go backends, net/http and Gin, in one module
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-09
 
 ## Context
@@ -55,17 +55,24 @@ Go gets two backends in version 1: one on the standard library's `net/http`, one
 - `docker compose run --rm go-checks` checks both.
 - Python keeps one framework. A framework-free Python, or Litestar, stays in Next.
 - The conformance suite (plan step 1.5) runs against three backends.
+- **Learned while building it, 2026-11-09:**
+  - Go's coverage gate counts every package's lines run by any package's tests (`-coverpkg=./...`), as pytest-cov does, since the contract's checks in `internal/apitest` run from each server's tests.
+  - Go's own HTTP client closes a body closed early up to 50 ms late, to reuse its connection. A client that measures leaving must turn keep-alive off ([notes](../../docs/benchmarking.md#measuring-latency-without-fooling-ourselves)).
+  - Gin's binary links every codec it can bind or render, and HTTP/3's quic-go: 28.7 MiB against `net/http`'s 9.6 MiB.
+  - `go-mod` rewrites `go.mod` and `go.sum` in Docker, and the Go gates keep their caches in named volumes ([gates](../../docs/gates.md#measured-on-2026-11-09)).
 
 ## Assumptions to verify
 
-- [ ] In both servers, a client that leaves cancels the request's context, and the fake stops within one token's gap. Checked by a test in this step; measured under load in plan step 3.3. *net/http, 2026-11-09: at most one more token, in 20 runs out of 20; the context is cancelled 0.2 ms after the client closes its connection. Go's own HTTP client closes it up to 50 ms late, so the test turns its keep-alive off ([backends](../../docs/backends.md#go-nethttp)).*
-- [ ] `GIN_MODE=release`, the logger and the recovery are what Gin's documentation shows for production. To check in this step.
+- [x] In both servers, a client that leaves cancels the request's context, and the fake stops within one token's gap. Checked by a test in this step; measured under load in plan step 3.3. *net/http, 2026-11-09: at most one more token, in 20 runs out of 20; the context is cancelled 0.2 ms after the client closes its connection. Go's own HTTP client closes it up to 50 ms late, so the test turns its keep-alive off ([backends](../../docs/backends.md#go-nethttp)).* *Gin, 2026-11-09: the same, at most one more token in 20 runs out of 20 ([backends](../../docs/backends.md#go-gin)).*
+- [x] `GIN_MODE=release`, the logger and the recovery are what Gin's documentation shows for production. To check in this step. *2026-11-09: Gin's [deployment page](https://gin-gonic.com/en/docs/deployment/) lists `GIN_MODE` without recommending a mode, and shows `gin.Default()`. Gin's own warning in debug mode says to `Switch to "release" mode in production`, `using env: export GIN_MODE=release` (v1.12.0, `debug.go`). `gin.Default()` is `New()` with `Logger()` and `Recovery()` (`gin.go`). Gin also warns that trusting all proxies "is NOT safe", so the router trusts none.*
 - [x] `encoding/json` writes `<` as `\u003c`, as the contract's page says from memory. To check in this step. *2026-11-09: it does, and `&` as `\u0026` ([backends](../../docs/backends.md#go-nethttp)).*
 
 ## Sources
 
 - Search summaries of [JetBrains' Go ecosystem report, 2025](https://blog.jetbrains.com/go/2025/11/10/go-language-trends-ecosystem-2025/), and [a comparison of Go web frameworks](https://glukhov.org/app-architecture/api-architecture/go-web-frameworks-stdlib-chi-gin-echo-fiber/), read on 2026-11-09.
 - GitHub's API for each repository's stars and latest release, 2026-11-09.
-- Gin v1.12.0's `context.go` and `go.mod`, and gin-contrib/sse v1.1.0's `sse-encoder.go`, read on 2026-11-09.
+- Gin v1.12.0's `context.go`, `gin.go`, `debug.go` and `go.mod`, and gin-contrib/sse v1.1.0's `sse-encoder.go`, read on 2026-11-09.
+- Gin's [deployment page](https://gin-gonic.com/en/docs/deployment/), read on 2026-11-09.
+- Our runs on 2026-11-09 ([backends](../../docs/backends.md#go-nethttp)).
 - [Docker's guide to building Go images](https://docs.docker.com/guides/golang/build-images/), read on 2026-11-09.
 - The owner's picks, 2026-11-09.
