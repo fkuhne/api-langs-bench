@@ -20,7 +20,7 @@ pytest's options may follow, such as `-k go-gin` for one backend. Why it's built
 
 ## What it checks
 
-288 checks, 96 for each backend:
+321 checks: 96 for each backend, and 33 for the fake server alone ([below](#the-fake-server-alone)). For each backend:
 
 | Group | Settings | What |
 |---|---|---|
@@ -32,7 +32,20 @@ pytest's options may follow, such as `-k go-gin` for one backend. Why it's built
 
 Every body and every event is also validated against the contract's schemas. Every stream is held to the wire format, its headers and its events' order.
 
-**Not checked:** a client that leaves, readiness answering 503, and the logs of a refused start-up ([0017](../spec/decisions/0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md)).
+### The fake server alone
+
+33 checks in [`test_fake_server.py`](../bench/conformance/test_fake_server.py), sent as a backend's client would send them ([0023](../spec/decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md), [the contract](../contract/README.md#the-fake-server)):
+
+| Group | Settings | What |
+|---|---|---|
+| The answer | The defaults, then paced | A stream's tokens, finish reason and usage against the contract's, with three values of `max_tokens`. Its first and last chunks. The usage, only when asked for. A whole answer, with its reasoning |
+| The pace | Paced, as for the backends | The pace rule on a stream of 42 tokens, whose headers must not come before the first token's time. A whole answer at the last token's time |
+| Failures | The defaults, then paced | Each `fake_error` status as a plain HTTP error, whole and streamed, and as an error chunk after 2 tokens. A 504 as half a second of silence, at once and after a token. 4 malformed `fake_error`s, refused before the first token's time. 3 bodies it can't read |
+| The rest | The defaults, then paced | Its health. A client that leaves after two tokens, and the line logged for it |
+
+These read the fake server's JSON loosely: its fields are held to llama.cpp's by its own tests ([fake server](fake-server.md#how-its-built)).
+
+**Not checked:** a client that leaves a backend, readiness answering 503, and the logs of a refused start-up ([0017](../spec/decisions/0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md)).
 
 ## The pace rule
 

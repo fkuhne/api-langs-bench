@@ -43,4 +43,4 @@ Don't rewrite a record to change its decision. Write a new record and mark the o
 | [0020](0020-the-first-numbers-a-ladder-of-rates-under-provisional-limits-three-passes.md) | The first numbers: a ladder of rates under provisional limits, in three passes | Accepted | 2026-11-10 |
 | [0021](0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md) | Keep LF line endings on every system, with a `.gitattributes` | Accepted | 2026-11-10 |
 | [0022](0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md) | The Python fake keeps time on the system's monotonic clock, not uvloop's | Accepted | 2026-11-10 |
-| [0023](0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md) | The fake upstream server: Go, in its own module, shaped as llama.cpp's chunks, field for field | Proposed | 2026-11-10 |
+| [0023](0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md) | The fake upstream server: Go, in its own module, shaped as llama.cpp's chunks, field for field | Accepted | 2026-11-10 |

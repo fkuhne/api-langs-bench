@@ -9,6 +9,7 @@ Each part of the repository has gates: checks that fail on a mistake, run in Doc
 | `docker compose run --rm contract-checks` | [`contract/openapi.yaml`](../contract/openapi.yaml), with Redocly's recommended rules except one ([`redocly.yaml`](../contract/redocly.yaml)) | Redocly CLI 2.69.0 |
 | `docker compose run --rm python-fastapi-checks` | [`backends/python-fastapi/`](../backends/python-fastapi/): `ruff check` with 16 rule families, `ruff format --check`, `mypy --strict`, and pytest with branch coverage of at least 90% and warnings as errors | Python 3.14.8, uv 0.12.24, ruff 0.16.10, mypy 2.4.0, pytest 9.1.1, pytest-cov 7.1.0, as ai-bootstrap |
 | `docker compose run --rm go-checks` | [`backends/go/`](../backends/go/): `golangci-lint run` ([`.golangci.yml`](../backends/go/.golangci.yml): the standard linters, plus gosec, bodyclose, noctx, errorlint and revive, with gofmt and goimports), then `go test -race -shuffle=on`, failing below 90% coverage. Coverage counts every package's lines run by any package's tests (`-coverpkg=./...`), as pytest-cov counts the Python backend's; the shared contract tests in `internal/apitest` run from each server's tests | Go 1.27.3, golangci-lint 2.15.0 |
+| `docker compose run --rm fake-server-checks` | [`fake-server/`](../fake-server/): the Go backends' gates, with its own [`.golangci.yml`](../fake-server/.golangci.yml) | As the Go backends. No dependency beyond Go's standard library |
 | `docker compose run --rm bench-checks` | [`bench/`](../bench/): the Python backend's gates | As the Python backend, plus jsonschema 4.26.0, PyYAML 6.0.3, referencing 0.37.0, httpx2 2.13.1 and dulwich 1.2.21 |
 
 Each checks service mounts its folder and `contract/` read-only, so it checks the current files. Go's checks also keep Go's build cache and golangci-lint's in two named volumes, so a run compiles only what changed; `docker compose down --volumes` clears them. After a dependency changes:
@@ -61,9 +62,13 @@ On the same machine, after plan step 1.4 added the two Go backends and Gin's dep
 - **The modules are in the image.** The checks image had fetched them into a BuildKit cache mount, which never reaches the image, so each run downloaded them again. Now `go vet ./...` runs in it with networking off.
 - **Disk:** the build cache volume holds 492.8 MB, and golangci-lint's 0.7 MB. The checks image is 387 MB compressed.
 
+## The fake server's gates, on 2026-11-10
+
+On the same Mac, with the checks image built and the caches warm: `fake-server-checks` took 3.8 and 3.5 s, timed from the host, with 0 issues and 97.7% coverage. Its checks image shows as 1.36 GB in `docker image ls`, and the server's own as 22.3 MB.
+
 ## In CI
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs each gate, and the [conformance suite](conformance.md), on every push and pull request, in GitHub Actions ([0019](../spec/decisions/0019-ci-on-github-actions-five-jobs-on-x86-64-with-the-runners-own-docker.md)). Each of its five jobs runs one of the commands above, on its own runner, with no cache and no secret.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs each gate, and the [conformance suite](conformance.md), on every push and pull request, in GitHub Actions ([0019](../spec/decisions/0019-ci-on-github-actions-five-jobs-on-x86-64-with-the-runners-own-docker.md)). Each of its jobs, five at first, and six since the fake server's gates joined on 2026-11-10, runs one of the commands above, on its own runner, with no cache and no secret.
 
 **The runner,** from each job's log on 2026-11-10:
 - `ubuntu-24.04`, image 20261101.360.1, x86-64, 4 CPUs and 16 GB;

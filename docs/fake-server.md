@@ -1,6 +1,51 @@
 # The fake upstream server
 
-The upstream that isolates a backend's own cost, its HTTP client included: a server shaped like llama.cpp's, which streams the contract's tokens at the contract's pace ([0004](../spec/decisions/0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)). How it's built, and why, is in [0023](../spec/decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md). It's plan step 2.1.
+The upstream that isolates a backend's own cost, its HTTP client included: a server shaped like llama.cpp's, which streams the contract's tokens at the contract's pace ([0004](../spec/decisions/0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)). How it's built, and why, is in [0023](../spec/decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md). It's plan step 2.1. It starts with:
+
+```text
+docker compose up -d --wait fake-server
+```
+
+It then answers on `127.0.0.1:8010`, and on Compose's network at `http://fake-server:8080/v1`. `FAKE_SERVER_PORT` in `.env` moves the first.
+
+## How it's built
+
+[`fake-server/`](../fake-server/) is a Go module of its own, with Go's standard library alone. It shares no code with the Go backends.
+
+| Package | What |
+|---|---|
+| [`internal/chat`](../fake-server/internal/chat/) | The routes: a request's plan ([`plan.go`](../fake-server/internal/chat/plan.go)), llama.cpp's shapes ([`chunks.go`](../fake-server/internal/chat/chunks.go)), and the answer, token by token ([`server.go`](../fake-server/internal/chat/server.go)) |
+| [`internal/clock`](../fake-server/internal/clock/) | Go's monotonic clock, and a wait until a time |
+| [`internal/settings`](../fake-server/internal/settings/), [`internal/tokens`](../fake-server/internal/tokens/) | The contract's `FAKE_*` settings and its token file |
+| [`internal/app`](../fake-server/internal/app/) | The start-up, the stop, and the `healthcheck` command Compose calls |
+
+- **What it answers** is in [the contract](../contract/README.md#the-fake-server): the contract's tokens at the contract's pace, in llama.cpp's chunks, and each `fake_error` as llama.cpp shows a failure.
+- **One write for each token.** A token's chunk is put together from parts made once: each token as JSON at start-up, and the fields every chunk ends with once for each answer.
+- **A client that leaves** ends its answer at once, and one line is logged, as JSON:
+
+  ```json
+  {"time":"2026-11-10T16:19:13.985130714Z","level":"INFO","msg":"closed early","id":"chatcmpl-00000000000000000000000000000005","stream":true,"tokens_sent":4,"after_ms":82.482}
+  ```
+- **A stop ends every open answer at once,** as if its client had left.
+- **No limit on its CPUs or memory** in Compose: it's a helper.
+- **Its gates** are `docker compose run --rm fake-server-checks`, the same as the Go backends' ([gates](gates.md)): 0 issues, and 97.7% coverage.
+
+**How close to llama.cpp's it is.** Two tests compare its stream and its whole answer with the capture below, kept in [`testdata/`](../fake-server/internal/chat/testdata/): the same events, each with the same fields, in the same order, with the same kind of value.
+
+| Event | llama.cpp's, bytes | The fake server's |
+|---|---|---|
+| The role | 274 | 258 |
+| A token of one character | 254 | 238 |
+| The finish reason | 245 | 229 |
+| The usage | 571 | 475 |
+
+The fake server's are 16 bytes shorter where the fields are the same: its model's name and its build's are `fake-server`, against `/models/stories260K.gguf` and `b12242-3b4d6ab3f`. Its usage is shorter because its timings are round numbers.
+
+**What it doesn't imitate:**
+- **llama.cpp's `Keep-Alive: timeout=5, max=100`,** which closes a connection idle for 5 s, or used 100 times. Go's server keeps a connection open.
+- **`Connection: close` after an error.** llama.cpp closes the connection it refused a request on.
+- **llama.cpp's slots,** four in the capture: the fake server answers any number of requests at once.
+- **Its other routes,** such as `/v1/models`.
 
 ## What llama.cpp sends
 
@@ -59,3 +104,60 @@ data: [DONE]
 - **A comment line, `:`,** may be sent as a ping, on a setting.
 
 **From its README:** the reasoning comes in `reasoning_content`, "similar to Deepseek API". A reasoning chunk wasn't captured: this model doesn't reason. Plan step 2.3 captures one.
+
+## Checked by the conformance suite
+
+`docker compose run --rm conformance` now starts the fake server too, and checks it alone, as a backend's client would call it: 33 checks in [`test_fake_server.py`](../bench/conformance/test_fake_server.py) ([conformance](conformance.md#what-it-checks)). On 2026-11-10, on the Mac, all 321 checks passed, in 77.95 s. Its lines on the pace, with the host busy (a load average near 5):
+
+```text
+the machine's timers: 200 sleeps of 10 ms woke 2.02 ms late at the median, 7.13 ms at the p99; tolerance 17.13 ms (the p99 plus 10 ms)
+fake-server: 42 tokens, lateness median 5.67 ms, min 3.34, max 18.87; the last quarter -0.72 ms on the first; headers at 114.8 ms
+go-nethttp: 42 events, lateness median 6.29 ms, min 4.51, max 10.06; the last quarter +0.05 ms on the first; headers at 4.2 ms
+```
+
+- **The fake server keeps the pace as the Go backends' in-process fake does:** no token early, and no lateness that adds up.
+- **Its headers came at 114.8 ms,** with the first token, due at 100 ms. A backend's come at once.
+
+## Measured alone, on 2026-11-10
+
+R4 asks that no helper be the bottleneck. The fake server alone, under oha 1.16.0 from the runner's image, on Compose's network, with the backends stopped:
+- **The machine:** the development Mac, an Apple M3 with 8 cores and 8 GB; Docker 29.5.2 in Colima's VM, with 4 CPUs and 5 GiB, which the load generator shares. The host was busy: a load average of 4 to 6.
+- **The request:** a stream of 20 tokens, as a backend's client asks for one, with `"stream_options": {"include_usage": true}`. The first token at 50 ms, then one every 10 ms, so a stream is due to end at 240 ms: the `stream-20` workload's pace ([runner](runner.md)).
+- **Each run:** 15 s at a fixed rate, with `--latency-correction`, after a 3 s warm-up. The server's CPU and memory were read once from `docker stats`, 8 s in.
+
+| Rate | Connections | Sent, of those due | p50 | p99 | First byte, p50 | The server's CPU | Its memory |
+|---|---|---|---|---|---|---|---|
+| 1,000/s | 960 | 14,999 of 15,000 | 241.2 ms | 260.2 ms | 51.1 ms | 115% | 52 MiB |
+| 2,000/s | 1,920 | 29,998 of 30,000 | 241.2 ms | 264.4 ms | 51.1 ms | 90% | 100 MiB |
+| 4,000/s | 3,840 | 59,993 of 60,000 | 241.2 ms | 272.6 ms | 51.1 ms | 155% | 196 MiB |
+| 6,000/s | 5,760 | 89,997 of 90,000 | 241.1 ms | 263.8 ms | 51.0 ms | 154% | 292 MiB |
+| 8,000/s | 7,680 | 119,999 of 120,000 | 499.9, then 249.0 and 242.9 ms | 1,959.2, then 777.6 and 320.3 ms | 226.5, then 56.2 and 52.3 ms | 261%, then 222% and 214% | 398 to 408 MiB |
+| 8,000/s | 2,048 | 119,991 of 120,000 | 241.3 ms | 261.5 ms | 51.0 ms | 162% | 143 MiB |
+| 12,000/s | 4,096 | 179,992 of 180,000 | 243.5 ms | 342.8 ms | 52.7 ms | 218% | 259 MiB |
+| 16,000/s | 4,096 | 221,967 of 240,000 | 711.8 ms | 1,437.1 ms | 75.3 ms | 241% | 271 MiB |
+
+No request failed in any of these runs.
+
+- **It kept 12,000 streams a second,** on 2.2 CPUs, with a p50 3.5 ms past the due time. That's three times what the Go backend kept under 1 CPU from its in-process fake, 4,000 ([runner](runner.md#what-the-ladder-rests-on)).
+- **The connections cost more than the streams.** At 8,000 a second it was on time with 2,048 connections, and late in one run of three with 7,680, four times the streams open, as the runner sizes them. Each connection costs 50 to 70 kB, and this VM's 4 CPUs also run the load generator.
+- **At 16,000 a second the run proves nothing:** 3,840 streams are open at once, and 4,096 connections leave no room.
+- **So on this Mac, the helper's margin is thin above 6,000 a second.** The numbers that matter come from a machine with cores to spare for the load generator, the fake server and the backend. Plan step 3.1 sets those cores; plan step 2.4 checks each backend against it.
+
+**The same request without a pace or a rate,** over 256 connections for 10 s, to see what the server costs without its timers:
+
+| Answer | A second | p50 | The server's CPU | Its memory |
+|---|---|---|---|---|
+| A stream of 20 tokens | 34,958 | 3.0 ms | 237% | 18 MiB |
+| A whole answer | 141,905 | 0.5 ms | 223% | 16 MiB |
+
+**Beside the Go backend, under the same conditions,** at 8,000 a second for 15 s, with `net/http` serving its in-process fake without a CPU limit:
+
+| Server | Connections | p50 | p99 | Its CPU |
+|---|---|---|---|---|
+| The fake server | 2,048 | 241.3 ms | 261.5 ms | 162% |
+| `go-nethttp`, its in-process fake | 2,048 | 241.4 ms | 268.4 ms | 181% |
+| `go-nethttp`, its in-process fake | 7,680 | 241.7 ms | 279.6 ms | 200% |
+
+The fake server's chunks are about seven times the size of the backend's events, 238 bytes against 33 for a token of one character, for no more CPU.
+
+Nothing was saved as a run: these check a helper, and aren't results.

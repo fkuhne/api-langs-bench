@@ -122,7 +122,7 @@ Both fakes behave the same, token for token and on the same timetable ([0004](..
 - **the in-process fake,** selected by `LLM_PROVIDER=fake`;
 - **the fake server** of plan step 2.1, which reads the same `FAKE_*` settings.
 
-How the fake server shapes its chunks, and how it shows each failure to the backend, is step 2.1's.
+How the fake server shapes its chunks, and how it shows each failure to the backend, is [below](#the-fake-server).
 
 ### The answer
 
@@ -130,7 +130,7 @@ How the fake server shapes its chunks, and how it shows each failure to the back
 - **The reasoning:** `FAKE_REASONING_TOKENS` tokens, sent as `reasoning` events.
 - **The answer's length** is `FAKE_ANSWER_TOKENS`, unless `max_tokens` is set to a smaller positive whole number, such as `5`. The fakes ignore any other value of `max_tokens`. It doesn't count the reasoning.
 - **The finish reason** is `length` when `max_tokens` cut the answer short, and `stop` otherwise.
-- **The model** is `fake` for the in-process fake.
+- **The model** is `fake` for the in-process fake, and `fake-server` for the fake server.
 - **The usage:**
   - `completion_tokens` counts the reasoning and the answer;
   - `prompt_tokens` counts the words in all the messages' contents. Words are separated by runs of spaces, tabs, line feeds and carriage returns. Any other character, a non-breaking space included, belongs to a word;
@@ -163,6 +163,32 @@ A `fake_error` parameter makes the fake fail, so the conformance suite can cause
 - **A malformed `fake_error`,** such as an unknown status, makes the fake fail at once with 502, the way an upstream refuses a parameter it doesn't accept.
 
 The backend passes `fake_error` on like any other parameter, so the fake server obeys it too.
+
+### The fake server
+
+The fake server answers as llama.cpp's server does, so a backend calls it with the client it calls llama.cpp with ([0023](../spec/decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md), [what llama.cpp sends](../docs/fake-server.md#what-llamacpp-sends)).
+
+- **`POST /v1/chat/completions`,** on port 8080. It reads `messages`, `stream`, `stream_options.include_usage`, `max_tokens` and `fake_error`, and ignores every other field, as llama.cpp ignores a parameter it doesn't know.
+- **A stream** is `data:` lines of JSON, then `data: [DONE]`:
+  1. a chunk whose delta is `{"role": "assistant", "content": null}`;
+  2. a chunk for each token, whose delta is `{"reasoning_content": "…"}` for the reasoning, then `{"content": "…"}` for the answer;
+  3. a chunk with the `finish_reason` and an empty delta;
+  4. a chunk with the `usage` and no choices, only when `stream_options.include_usage` is true.
+- **A whole answer** is one JSON object, with `choices[0].message.content`, `reasoning_content` beside it when there is reasoning, `finish_reason` and `usage`.
+- **The headers of a stream, and its first chunk, leave with the first token,** at that token's time. The chunks after the tokens leave with the last one.
+- **`GET /health`** answers 200, with `{"status": "ok"}`.
+
+A `fake_error` shows as llama.cpp shows a failure, at the failing token's time:
+
+| `status` | Before the first token, or in a whole answer | After tokens, in a stream |
+|---|---|---|
+| 429 | HTTP 429, with `{"error": {"code": 429, "message": "…", "type": "rate_limit_error"}}` | A `data:` line with the same object. The stream ends there, without `[DONE]` |
+| 502 | HTTP 400, with the type `invalid_request_error` | The same, with the code 400 |
+| 503 | HTTP 503, with the type `unavailable_error` | The same, with the code 503 |
+| 504 | No answer: the connection stays open and silent | No more chunks: the stream stays open and silent |
+
+- **A malformed `fake_error`,** and a body that isn't a chat request, answer HTTP 400 at once, with the type `invalid_request_error`.
+- **Which of these a backend turns into which of its own statuses** is plan step 2.2.
 
 ## Comparing answers
 
