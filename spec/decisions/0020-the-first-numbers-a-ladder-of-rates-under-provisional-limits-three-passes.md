@@ -1,6 +1,6 @@
 # 0020. The first numbers: a ladder of rates under provisional limits, in three passes
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-10
 
 ## Context
@@ -51,9 +51,14 @@ The first numbers are the `stream-20` workload at 100, 500, 1,000 and 2,000 requ
 
 - [x] Go sizes itself to a container's CPU limit. *2026-11-10: under `--cpus 1`, Go 1.27.3 sets `GOMAXPROCS` to 2, its minimum, against 4 without a limit (our run).*
 - [ ] Python's uvicorn, with one process, needs no setting to respect a 1-CPU limit. Unchecked: one process on one event loop can't use more than one CPU anyway.
-- [ ] With connections at four times the streams open at once, no request waits for a connection while a backend keeps its pace. To check in this step.
+- [x] With connections at four times the streams open at once, no request waits for a connection while a backend keeps its pace. To check in this step. *2026-11-10: both Go servers kept every rate to 2,000 a second with a p50 within 2.2 ms of the due time, and no error ([runner](../../docs/runner.md#a-check-of-the-ladder-on-2026-11-10)).*
 - [ ] Three passes give a range small enough to tell the backends apart. To check with the first numbers.
 - [ ] 512 MiB binds no backend at these rates. Peaks were near 105 MiB in the quick ladder; to check with the first numbers, once memory is sampled (plan step 3.4).
+
+## Learned while building it
+
+- **Under 1 CPU, Python ran out between 500 and 1,000 requests a second** on the Mac: at 1,000 it answered 695 a second. In the quick ladder, without a limit, it was near its ceiling at 1,500. One pass on a busy machine; the first numbers will say more ([runner](../../docs/runner.md#a-check-of-the-ladder-on-2026-11-10)).
+- **A run that fails needs reading with care:** its percentiles leave out requests never sent, and cover only what oha timed. The table's last three columns say when that happened.
 
 ## Sources
 
