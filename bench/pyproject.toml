@@ -3,9 +3,10 @@ name = "bench"
 version = "0.1.0"
 description = "The evaluation tool: the conformance suite, the runner and the analysis (spec/decisions/0012)."
 requires-python = ">=3.14,<3.15"
-# Reading the contract, and the conformance suite's client, as the Python backend's tests use
-# (spec/decisions/0017). The runner (step 1.6) adds its own.
+# Reading the contract; the conformance suite's client, as the Python backend's tests use
+# (spec/decisions/0017); and reading the repository's commit for a run (spec/decisions/0018).
 dependencies = [
+    "dulwich==1.2.21",
     "httpx2==2.13.1",
     "jsonschema==4.26.0",
     "pyyaml==6.0.3",

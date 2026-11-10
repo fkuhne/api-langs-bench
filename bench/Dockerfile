@@ -1,8 +1,9 @@
 # The evaluation tool's image, in stages:
 #   base         Python and uv
 #   dev          the locked dev tools, for `docker compose run --rm bench-checks`
-#   conformance  Docker's and Compose's binaries too, for `docker compose run --rm conformance`
-# The runner's own stage arrives with it (plan step 1.6).
+#   driver       Docker's and Compose's binaries too, to start the backends
+#   conformance  the suite, for `docker compose run --rm conformance`
+#   runner       oha too, for `docker compose run --rm runner`
 
 FROM python:3.14.8-slim-trixie AS base
 COPY --from=ghcr.io/astral-sh/uv:0.12.24 /uv /bin/
@@ -23,10 +24,18 @@ ENV PATH=/opt/venv/bin:$PATH
 COPY --from=contract . /contract/
 COPY . .
 
-# The conformance suite drives Compose itself, over Docker's socket, to start each backend with
-# the settings a check needs (spec/decisions/0017). Only the two binaries, as for uv's.
-FROM dev AS conformance
+# The conformance suite and the runner drive Compose themselves, over Docker's socket, to start
+# each backend with the settings they need (spec/decisions/0017). Only the two binaries, as for
+# uv's.
+FROM dev AS driver
 COPY --from=docker:29.5.2-cli /usr/local/bin/docker /usr/local/bin/
 COPY --from=docker:29.5.2-cli /usr/local/libexec/docker/cli-plugins/docker-compose \
     /usr/local/libexec/docker/cli-plugins/
+
+FROM driver AS conformance
 ENTRYPOINT ["pytest", "conformance"]
+
+# The load generator's binary (spec/decisions/0018).
+FROM driver AS runner
+COPY --from=ghcr.io/hatoo/oha:1.16.0 /bin/oha /usr/local/bin/
+ENTRYPOINT ["python", "-m", "bench.runner"]

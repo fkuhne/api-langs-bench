@@ -200,6 +200,38 @@ services:
       GO_NETHTTP_PORT: ${GO_NETHTTP_PORT:-8002}
       GO_GIN_PORT: ${GO_GIN_PORT:-8003}
 
+  # The runner: docker compose run --rm runner
+  # `--backend go-gin` may follow, for one backend. It sends one workload to each backend in
+  # turn, the others stopped, and saves each run once in runs/ (spec/decisions/0018). Like the
+  # conformance suite, it starts the backends through Docker's socket, and leaves each running
+  # with the settings below.
+  runner:
+    build:
+      context: bench
+      target: runner
+      additional_contexts:
+        contract: contract
+    profiles: [tools]
+    depends_on:
+      python-fastapi:
+        condition: service_healthy
+      go-nethttp:
+        condition: service_healthy
+      go-gin:
+        condition: service_healthy
+    volumes:
+      - ./bench:/app:ro
+      - ./contract:/contract:ro
+      - .:/repo:ro
+      - ./runs:/runs
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      <<: *backend-environment
+      PYTHON_FASTAPI_PORT: ${PYTHON_FASTAPI_PORT:-8001}
+      GO_NETHTTP_PORT: ${GO_NETHTTP_PORT:-8002}
+      GO_GIN_PORT: ${GO_GIN_PORT:-8003}
+      BENCH_MACHINE: ${BENCH_MACHINE:-}
+
   # Rewrites a Python project's uv.lock after its dependencies change, then rebuild its checks:
   #   docker compose run --rm python-lock bench
   #   docker compose run --rm python-lock backends/python-fastapi
