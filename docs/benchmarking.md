@@ -104,6 +104,7 @@ From [its README](https://github.com/ggml-org/llama.cpp/blob/master/tools/server
 - **Answers carry `timings`,** such as `predicted_per_second`.
 - **Images:** `ghcr.io/ggml-org/llama.cpp:server`, and `:server-cuda` for NVIDIA.
 - **Its stream is one event for each token,** each about 250 bytes, between a chunk with the role and chunks with the finish reason and the usage; its headers leave with the first token. Captured from the server itself on 2026-11-10 ([fake server](fake-server.md#what-llamacpp-sends)).
+- **At build `b12242`,** given only `--model-url`, the server starts in "router mode" with no model; given a path too, it downloads the file there once. Without a slot count it picked 4 on a VM with 4 CPUs. A reasoning model's thoughts come as `delta.reasoning_content` chunks ([llama.cpp](llama-cpp.md#measured-on-2026-11-10), our runs of 2026-11-10).
 
 ### Ollama Cloud
 

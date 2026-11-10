@@ -25,7 +25,7 @@ pytest's options may follow, such as `-k go-gin` for one backend. Why it's built
 
 ## What it checks
 
-627 checks: 99 for each backend from each of its two upstreams, and 33 for the fake server alone ([below](#the-fake-server-alone)). For each backend, from each upstream:
+627 checks: 99 for each backend from each of its two upstreams, and 33 for the fake server alone ([below](#the-fake-server-alone)). 21 more, through llama.cpp's real model, run only when asked, with `-m llama_cpp` ([llama.cpp](llama-cpp.md#checked-by-the-conformance-suite)). For each backend, from each upstream:
 
 | Group | Settings | What |
 |---|---|---|

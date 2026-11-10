@@ -76,7 +76,7 @@ Each backend calls its upstream with its ecosystem's plain HTTP client, not an O
 - [x] A client that leaves a backend closes the upstream's connection: the fake server logs it. To check in this step. *2026-11-10: a client that left at 120 ms was logged by the fake server at 114.6, 118.4 and 131.8 ms from its own start, for Python, `net/http` and Gin ([backends](../../docs/backends.md#the-upstream-client)). Once each, by hand: the suite doesn't check it yet.*
 - [ ] 1,000 connections don't bind any backend at the rates measured. To check with plan step 2.4's runs.
 - [ ] The idle expiry's defaults, 5 s in httpx2 and 90 s in Go, don't change a steady run. Unchecked; plan step 3.1.
-- [ ] llama.cpp's real failures fit this mapping. To check at plan step 2.3.
+- [x] llama.cpp's real failures fit this mapping. To check at plan step 2.3. *2026-11-10: partly. A refused parameter got llama.cpp's 400 and the backends' 502, and a stopped llama.cpp a 503 ([llama.cpp](../../docs/llama-cpp.md)). Its 503 while a model loads wasn't seen: the healthcheck holds the backends back until it's loaded.*
 
 ## Learned while building it
 

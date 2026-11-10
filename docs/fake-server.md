@@ -107,7 +107,7 @@ data: [DONE]
 - **A client that leaves** stops the generation: each wait checks whether the connection is closed.
 - **A comment line, `:`,** may be sent as a ping, on a setting.
 
-**From its README:** the reasoning comes in `reasoning_content`, "similar to Deepseek API". A reasoning chunk wasn't captured: this model doesn't reason. Plan step 2.3 captures one.
+**From its README:** the reasoning comes in `reasoning_content`, "similar to Deepseek API". A reasoning chunk wasn't captured: this model doesn't reason. Plan step 2.3 captured one from Qwen3.5-0.8B, the same day: `"delta":{"reasoning_content":"Thinking"}`, as the fake server sends it ([llama.cpp](llama-cpp.md#measured-on-2026-11-10)).
 
 ## Checked by the conformance suite
 

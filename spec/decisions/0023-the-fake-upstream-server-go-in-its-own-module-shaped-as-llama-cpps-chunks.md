@@ -89,7 +89,7 @@ The fake server is written in Go, with the standard library alone, as its own mo
 - [x] It reaches a rate well above every backend's ceiling on the same machine: at least 8,000 `stream-20` streams a second on the Mac, twice what the Go backend kept under 1 CPU. To check in this step, alone, with oha. *2026-11-10: partly. It kept 12,000 a second over 4,096 connections, and 8,000 over 2,048. With connections at four times the streams open, as the runner sizes them, it kept 6,000, and was late at 8,000 in one run of three: the VM's 4 CPUs also run the load generator ([fake server](../../docs/fake-server.md#measured-alone-on-2026-11-10)).*
 - [ ] On the machine that makes the numbers, the fake server stays far from its ceiling at every rate a backend is measured at. To check at plan step 2.4, and with plan step 3.1's cores.
 - [ ] llama.cpp sends its role chunk and its first token in the same write. Unchecked: the capture shows them as separate events, not when each left.
-- [ ] llama.cpp's reasoning chunk is `{"reasoning_content": "…"}` in the delta, with no `content`. From its README; to capture at plan step 2.3.
+- [x] llama.cpp's reasoning chunk is `{"reasoning_content": "…"}` in the delta, with no `content`. From its README; to capture at plan step 2.3. *2026-11-10: captured from Qwen3.5-0.8B: `"delta":{"reasoning_content":"Thinking"}` ([llama.cpp](../../docs/llama-cpp.md)).*
 - [ ] A 429 never comes from llama.cpp itself. Unchecked; the fake server's 429 body follows its error format, with a type of our own.
 - [ ] A backend's client can't tell the fake server from llama.cpp by anything it reads ([0004](0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)). To check at plan step 2.4, where each backend runs against both.
 
