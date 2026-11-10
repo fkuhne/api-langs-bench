@@ -146,7 +146,7 @@ Counting the reasoning and the answer together, token *i* (from 0) is due at:
 - **The fake waits until each token's time,** rather than sleeping a gap after each token, so delays don't add up. A token whose time has passed goes at once.
 - **The whole answer** comes at the last token's time.
 
-How close to its time each token must be is set by the conformance suite (plan step 1.5).
+How close to its time each token must be is set by the conformance suite's [pace rule](../docs/conformance.md#the-pace-rule).
 
 ### Errors on request
 
@@ -165,7 +165,7 @@ The backend passes `fake_error` on like any other parameter, so the fake server 
 
 ## Comparing answers
 
-The conformance suite (plan step 1.5) compares each backend's answers to the contract by these rules:
+The [conformance suite](../docs/conformance.md) compares each backend's answers to the contract by these rules:
 - **Statuses and event names** must match exactly.
 - **JSON is compared after parsing.** Key order, white space and how characters are escaped don't count; Go's `encoding/json` writes `<` as `\u003c` by default (our run, 2026-11-09). A field that is null may be left out.
 - **Token texts** must match exactly, event by event.

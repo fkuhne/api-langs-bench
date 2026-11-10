@@ -1,6 +1,6 @@
 # 0017. The conformance suite: pytest that drives Compose, and a pace rule from the machine's timers
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-09
 
 ## Context
@@ -46,7 +46,7 @@ The conformance suite is a pytest suite in `bench/conformance/`, run with `docke
   - **No event early,** by any amount. The backend starts after the request is sent, so an early event is always a bug.
   - **Lateness doesn't add up:** the median lateness of the stream's last quarter of events is within T of its first quarter's. A fake that sleeps one gap after each token fails it.
   - **The median lateness is within T.**
-- **The tolerance T** is the p99 lateness of a timer probe, plus a margin. The probe runs at the start of every run, in the suite's container: 200 sleeps, each to a deadline 10 ms after the last one's. The margin, 5 or 10 ms, is fixed from this step's runs, and written here.
+- **The tolerance T** is the p99 lateness of a timer probe, plus a margin. The probe runs at the start of every run, in the suite's container: 200 sleeps, each to a deadline 10 ms after the last one's. The margin is 10 ms, fixed from this step's runs: at 5 ms, the first run failed a correct backend, whose single events came 7 to 10 ms late at the median on this Mac ([conformance](../../docs/conformance.md#the-pace-rule)).
 - **The whole answer and a failure** must come at their token's time, by the same rule. Each is a single event, so the suite takes the median of repeated requests.
 - **The suite's own parts** live in `bench/bench/`, with unit tests under `bench-checks`: the stream's parser, the model of the fakes, the pace rule, and the Compose driver.
 - **Not checked:**
@@ -76,13 +76,15 @@ The conformance suite is a pytest suite in `bench/conformance/`, run with `docke
 ## Assumptions to verify
 
 - [ ] Mounting `/var/run/docker.sock` works the same with Docker Desktop on macOS and on Windows. Unchecked; to check in CI (plan step 1.7) and on the report's second machine (plan step 6.2).
-- [ ] The margin keeps a correct backend from failing: no false failure in 10 runs of the suite on this Mac. To check in this step.
-- [ ] A fake that sleeps one gap after each token fails the pace rule, on this Mac. To check in this step, with that fake planted on purpose.
-- [ ] Each check fails when it should. To check in this step, with mistakes planted on purpose.
+- [x] The margin keeps a correct backend from failing: no false failure in 10 runs of the suite on this Mac. To check in this step. *2026-11-09: at 10 ms, 288 checks passed in 10 runs out of 10. At 5 ms, the first run failed the Python backend twice ([conformance](../../docs/conformance.md#measured-on-2026-11-09)).*
+- [ ] The margin can shrink on native Linux, where timers are tighter. To check on the report's machine (plan step 6.2).
+- [x] A fake that sleeps one gap after each token fails the pace rule, on this Mac. To check in this step, with that fake planted on purpose. *2026-11-09: it fails on both Go servers, with a median lateness of 62.0 and 58.5 ms ([conformance](../../docs/conformance.md#measured-on-2026-11-09)).*
+- [x] Each check fails when it should. To check in this step, with mistakes planted on purpose. *2026-11-09: six planted mistakes, each caught ([conformance](../../docs/conformance.md#measured-on-2026-11-09)). Not every check was given a mistake of its own.*
 
 ## Sources
 
 - [Schemathesis 4.11.0's release](https://newreleases.io/project/pypi/schemathesis/release/4.11.0) and [its guide to server-sent events](https://schemathesis.readthedocs.io/en/stable/guides/server-sent-events/), read on 2026-11-09.
 - Our runs on 2026-11-09: Compose from a container, and the size of `docker:29.5.2-cli`'s binaries.
+- Our runs of the suite on 2026-11-09 ([conformance](../../docs/conformance.md)).
 - The timer measurements in [0015](0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md) and [backends](../../docs/backends.md).
 - The owner's picks, 2026-11-09.

@@ -33,7 +33,7 @@ The evaluation tool is written in Python, in `bench/` ([0011](0011-lay-the-repos
 
 ## Assumptions to verify
 
-- [ ] Python times each streamed event closely enough to check the fakes' pace without load, at the gaps the workloads use. To check in step 1.5.
+- [x] Python times each streamed event closely enough to check the fakes' pace without load, at the gaps the workloads use. To check in step 1.5. *2026-11-09: at a 20 ms gap, the suite's Python client saw each backend's median lateness within 7.5 ms on a Mac, in 10 runs, and failed a fake that drifts ([conformance](../../docs/conformance.md#measured-on-2026-11-09)). The workloads' gaps are plan step 3.2's; a smaller one is checked then.*
 
 ## Sources
 
