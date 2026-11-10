@@ -125,6 +125,44 @@ services:
       timeout: 5s
       retries: 3
 
+  # llama.cpp's server, with one small model on CPU (spec/decisions/0025). In a profile, so it
+  # starts only when named: docker compose up -d --wait llama-cpp. The first start downloads the
+  # model, 533 MB, into the llama-models volume. A helper, so it has no limits.
+  llama-cpp:
+    image: ghcr.io/ggml-org/llama.cpp:server-b12242@sha256:4d2de15a0ffbce704777c64026b40512a71e0bbc0b303a5fe5ea9bf71760dff9
+    profiles: [llm]
+    command:
+      # The file at that URL, downloaded to that path once, then loaded from there.
+      - --model
+      - /models/${LLAMA_MODEL_FILE:-Qwen3.5-0.8B-Q4_K_M.gguf}
+      - --model-url
+      - ${LLAMA_MODEL_URL:-https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/6ab461498e20/Qwen3.5-0.8B-Q4_K_M.gguf}
+      # Text only: no image or audio component.
+      - --no-mmproj
+      - --parallel
+      - ${LLAMA_SLOTS:-4}
+      - --ctx-size
+      - ${LLAMA_CONTEXT_SIZE:-8192}
+    environment:
+      # Set explicitly, as ai-bootstrap does: llama.cpp plans to change its default port.
+      LLAMA_ARG_PORT: 8080
+      # Only pages served from this machine may call it from a browser. The backends call it
+      # from inside Docker, where CORS doesn't apply.
+      LLAMA_ARG_CORS_ORIGINS: localhost
+    volumes:
+      - llama-models:/models
+    ports:
+      - 127.0.0.1:${LLAMA_PORT:-8020}:8080
+    # The image's own check: /health answers 503 while the model loads.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/health"]
+      # The first start downloads the model, so failures count only after 30 minutes.
+      start_period: 30m
+      start_interval: 2s
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The contract's lint: docker compose run --rm contract-checks
   contract-checks:
     image: redocly/cli:2.69.0
@@ -269,6 +307,11 @@ services:
       GO_NETHTTP_PORT: ${GO_NETHTTP_PORT:-8002}
       GO_GIN_PORT: ${GO_GIN_PORT:-8003}
       FAKE_SERVER_PORT: ${FAKE_SERVER_PORT:-8010}
+      LLAMA_PORT: ${LLAMA_PORT:-8020}
+      LLAMA_MODEL_URL: ${LLAMA_MODEL_URL:-https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/6ab461498e20/Qwen3.5-0.8B-Q4_K_M.gguf}
+      LLAMA_MODEL_FILE: ${LLAMA_MODEL_FILE:-Qwen3.5-0.8B-Q4_K_M.gguf}
+      LLAMA_SLOTS: ${LLAMA_SLOTS:-4}
+      LLAMA_CONTEXT_SIZE: ${LLAMA_CONTEXT_SIZE:-8192}
       BACKEND_CPUS: ${BACKEND_CPUS:-1}
       BACKEND_MEMORY: ${BACKEND_MEMORY:-512m}
 
@@ -303,6 +346,7 @@ services:
       PYTHON_FASTAPI_PORT: ${PYTHON_FASTAPI_PORT:-8001}
       GO_NETHTTP_PORT: ${GO_NETHTTP_PORT:-8002}
       GO_GIN_PORT: ${GO_GIN_PORT:-8003}
+      FAKE_SERVER_PORT: ${FAKE_SERVER_PORT:-8010}
       BACKEND_CPUS: ${BACKEND_CPUS:-1}
       BACKEND_MEMORY: ${BACKEND_MEMORY:-512m}
       BENCH_MACHINE: ${BENCH_MACHINE:-}
@@ -342,4 +386,6 @@ services:
 # Caches the gates keep between runs. `docker compose down --volumes` clears them.
 volumes:
   go-build-cache:
+  # llama.cpp's model, downloaded once.
+  llama-models:
   golangci-lint-cache:

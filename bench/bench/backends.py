@@ -15,11 +15,16 @@ def url(service: str, path: str = "") -> str:
 IN_PROCESS = "fake"
 FAKE_SERVER = "fake-server"
 UPSTREAMS = (IN_PROCESS, FAKE_SERVER)
+# llama.cpp's server, with a real model: checked apart, since it needs a download
+# (spec/decisions/0025).
+LLAMA_CPP = "llama-cpp"
 # The model each one's answers name.
 MODELS = {IN_PROCESS: "fake", FAKE_SERVER: "fake-server"}
 # How long a backend waits for the fake server in the conformance suite, in seconds: short, so
 # a check of the upstream's silence doesn't take long.
 SUITE_TIMEOUT_S = 1
+# How long a backend waits for llama.cpp in the suite: a real model on a CPU is slow.
+LLAMA_TIMEOUT_S = 60
 
 
 def upstream_settings(upstream: str) -> dict[str, str]:
@@ -28,6 +33,6 @@ def upstream_settings(upstream: str) -> dict[str, str]:
         return {"LLM_PROVIDER": "fake"}
     return {
         "LLM_PROVIDER": "openai-compatible",
-        "LLM_BASE_URL": f"http://{FAKE_SERVER}:8080/v1",
-        "LLM_TIMEOUT_SECONDS": str(SUITE_TIMEOUT_S),
+        "LLM_BASE_URL": f"http://{upstream}:8080/v1",
+        "LLM_TIMEOUT_SECONDS": str(LLAMA_TIMEOUT_S if upstream == LLAMA_CPP else SUITE_TIMEOUT_S),
     }
