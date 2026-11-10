@@ -120,3 +120,16 @@ The same runner, later that day: both attempts of [run 42830465967](https://gith
 - **The pace rule caught a real fault,** not a flaky check: Python's fake counted its deadlines on uvloop's clock, which counts whole milliseconds and runs up to 2 ms behind the system's. A faster machine, with less time between the client and the backend, let it show.
 - **The Mac never showed it:** its late timers cover a millisecond many times over.
 - **The fix** is in [0022](../spec/decisions/0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md): the fake reads the system's monotonic clock, and waits again when the event loop wakes early.
+
+**After the fix,** three attempts of [run 42839239272](https://github.com/fkuhne/api-langs-bench/actions/runs/42839239272), on commit `72fdaf1`: 288 checks passed in each.
+
+| | Attempt 1 | Attempt 2 | Attempt 3 |
+|---|---|---|---|
+| The timer probe, median / p99 | 0.11 / 0.12 ms late | 0.07 / 0.15 ms | 0.11 / 0.12 ms |
+| Python's stream, median lateness | 2.02 ms | 2.21 ms | 1.93 ms |
+| Python's stream, smallest lateness | 1.57 ms | 1.64 ms | 1.50 ms |
+| `net/http`'s, median / smallest | 1.34 / 0.83 ms | 1.27 / 0.79 ms | 1.25 / 0.74 ms |
+| Gin's, median / smallest | 1.26 / 0.72 ms | 1.35 / 0.88 ms | 1.31 / 0.79 ms |
+
+- **No event early,** in any attempt.
+- **Python's tokens now come 0.6 to 0.9 ms after Go's** at the median. That's what a clock of whole milliseconds costs: a wait ends at uvloop's first millisecond past the token's time.

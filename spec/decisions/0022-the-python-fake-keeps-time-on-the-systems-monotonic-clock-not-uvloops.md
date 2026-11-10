@@ -38,7 +38,7 @@ The Python fake reads `time.monotonic()` for its start and its deadlines, and re
 
 ## Assumptions to verify
 
-- [ ] In CI, Python's fake sends no event early: several attempts in a row. To check with this commit.
+- [x] In CI, Python's fake sends no event early: several attempts in a row. To check with this commit. *2026-11-10: three attempts out of three passed, and Python's earliest event came 1.50 to 1.64 ms late, against -0.18 and -0.16 ms before ([conformance](../../docs/conformance.md#pythons-fake-sent-tokens-early-on-2026-11-10)).*
 - [x] The second wait doesn't cost Python a rate it kept. *2026-11-10, on the Mac, one run each on a busy host: at 500 requests a second it kept the rate before and after, with a p50 of 242.4 ms before and 243.5 ms after (`runs/20261110T104733Z-python-fastapi-500rps.json`, `runs/20261110T145513Z-python-fastapi-500rps.json`).* What it costs in CPU is plan step 3.4's to measure.
 - [ ] uvloop's clock lags as measured for the reason its code gives: libuv reads a coarse clock. Unchecked: from memory of libuv's source, not read today.
 
