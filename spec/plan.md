@@ -30,7 +30,7 @@ The work, as small steps in order. Each step names the decision records it depen
 
 ## Phase 2: The local upstreams
 
-- [ ] 2.1 **The fake upstream server:** shaped like llama.cpp's OpenAI-compatible chat API, streaming the contract's tokens at its pace. It's written once, and measured on its own to show it isn't the bottleneck ([0004](decisions/0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)). *Choices:* its language; how closely it imitates llama.cpp's chunks.
+- [ ] 2.1 **The fake upstream server:** shaped like llama.cpp's OpenAI-compatible chat API, streaming the contract's tokens at its pace. It's written once, and measured on its own to show it isn't the bottleneck ([0004](decisions/0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)). *Picked* ([0023](decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md)): Go, in its own module; llama.cpp's chunks, field for field; a `fake_error` shown as llama.cpp shows a failure.
 - [ ] 2.2 **Each backend's upstream client:** the OpenAI-compatible call, whole and streamed, with ai-bootstrap's error mapping. *Choice:* each ecosystem's OpenAI SDK, as ai-bootstrap uses, or its plain HTTP client.
 - [ ] 2.3 **llama.cpp in Compose:** the pinned server image, one small model on CPU, and readiness. *Choices:* the model, and the server's slots.
 - [ ] 2.4 **Runs against the three local upstreams,** and the time each backend adds over its upstream.
