@@ -1,0 +1,61 @@
+# CI: each part's gates, and the conformance suite against the in-process fakes, on every push and
+# pull request (spec/decisions/0019). Each job runs the repository's own command, as on any
+# machine, with the runner's own Docker and Compose.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# The token can only read the repository. No job uses a secret.
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: The contract's lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker compose run --rm contract-checks
+
+  python-fastapi:
+    name: The Python backend's gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker compose run --rm python-fastapi-checks
+
+  go:
+    name: The Go backends' gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker compose run --rm go-checks
+
+  bench:
+    name: The evaluation tool's gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker compose run --rm bench-checks
+
+  conformance:
+    name: The conformance suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # What the runner is, for the notes (spec/decisions/0019).
+      - run: docker version && docker compose version && nproc && free -m
+      - run: docker compose run --rm conformance
