@@ -1,6 +1,6 @@
 # 0023. The fake upstream server: Go, in its own module, shaped as llama.cpp's chunks, field for field
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-10
 
 ## Context
@@ -74,6 +74,7 @@ The fake server is written in Go, with the standard library alone, as its own mo
 
 ## Consequences
 
+- CI gains a sixth job, the fake server's gates, and its conformance job starts the fake server too ([0019](0019-ci-on-github-actions-five-jobs-on-x86-64-with-the-runners-own-docker.md)).
 - The fake server is in a contestant's language. It isn't measured, it runs without limits, and backends reach it over HTTP alone; its own run shows how far its ceiling is.
 - The contract's token rules now exist a fourth time: in Python, twice in Go, and in the evaluation tool. The conformance suite compares them through the backends once plan step 2.2 connects them.
 - What isn't imitated, and may matter later:
@@ -84,8 +85,9 @@ The fake server is written in Go, with the standard library alone, as its own mo
 
 ## Assumptions to verify
 
-- [ ] The fake server keeps the contract's pace: no token early, none late beyond the machine's timers. To check in this step, with the conformance suite's pace rule.
-- [ ] It reaches a rate well above every backend's ceiling on the same machine: at least 8,000 `stream-20` streams a second on the Mac, twice what the Go backend kept under 1 CPU. To check in this step, alone, with oha.
+- [x] The fake server keeps the contract's pace: no token early, none late beyond the machine's timers. To check in this step, with the conformance suite's pace rule. *2026-11-10, on the Mac: the rule passed in two runs out of two, with a median lateness of 8.74 and 5.67 ms against tolerances of 18.20 and 17.13 ms, beside 10.82 and 6.29 ms for `net/http`'s in-process fake ([fake server](../../docs/fake-server.md#checked-by-the-conformance-suite)). On a machine with tight timers it's still to see: CI, with this commit.*
+- [x] It reaches a rate well above every backend's ceiling on the same machine: at least 8,000 `stream-20` streams a second on the Mac, twice what the Go backend kept under 1 CPU. To check in this step, alone, with oha. *2026-11-10: partly. It kept 12,000 a second over 4,096 connections, and 8,000 over 2,048. With connections at four times the streams open, as the runner sizes them, it kept 6,000, and was late at 8,000 in one run of three: the VM's 4 CPUs also run the load generator ([fake server](../../docs/fake-server.md#measured-alone-on-2026-11-10)).*
+- [ ] On the machine that makes the numbers, the fake server stays far from its ceiling at every rate a backend is measured at. To check at plan step 2.4, and with plan step 3.1's cores.
 - [ ] llama.cpp sends its role chunk and its first token in the same write. Unchecked: the capture shows them as separate events, not when each left.
 - [ ] llama.cpp's reasoning chunk is `{"reasoning_content": "…"}` in the delta, with no `content`. From its README; to capture at plan step 2.3.
 - [ ] A 429 never comes from llama.cpp itself. Unchecked; the fake server's 429 body follows its error format, with a type of our own.
@@ -96,5 +98,5 @@ The fake server is written in Go, with the standard library alone, as its own mo
 - llama.cpp's server, image `ghcr.io/ggml-org/llama.cpp:server` at digest `sha256:4d2de15a0ffbce704777c64026b40512a71e0bbc0b303a5fe5ea9bf71760dff9`, 291.8 MB, with [`stories260K.gguf`](https://huggingface.co/ggml-org/models/blob/main/tinyllamas/stories260K.gguf): our run on the Mac, 2026-11-10.
 - [llama.cpp's server README](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md) and [`server-context.cpp`](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/server-context.cpp), read on 2026-11-10.
 - ai-bootstrap's [`openai_compatible_client.py`](https://github.com/fkuhne/ai-bootstrap/blob/main/backend/app/llm/openai_compatible_client.py), [`openai_errors.py`](https://github.com/fkuhne/ai-bootstrap/blob/main/backend/app/llm/openai_errors.py) and [`services.py`](https://github.com/fkuhne/ai-bootstrap/blob/main/backend/app/core/services.py), read on 2026-11-10.
-- Our runs on 2026-11-09 and 2026-11-10 ([runner](../../docs/runner.md)).
+- Our runs on 2026-11-09 and 2026-11-10 ([runner](../../docs/runner.md), [fake server](../../docs/fake-server.md)).
 - The owner's picks, 2026-11-10.

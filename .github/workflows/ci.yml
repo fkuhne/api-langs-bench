@@ -1,5 +1,5 @@
-# CI: each part's gates, and the conformance suite against the in-process fakes, on every push and
-# pull request (spec/decisions/0019). Each job runs the repository's own command, as on any
+# CI: each part's gates, and the conformance suite against the in-process fakes and the fake
+# server, on every push and pull request (spec/decisions/0019, spec/decisions/0023). Each job runs the repository's own command, as on any
 # machine, with the runner's own Docker and Compose.
 
 name: CI
@@ -41,6 +41,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker compose run --rm go-checks
+
+  fake-server:
+    name: The fake server's gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker compose run --rm fake-server-checks
 
   bench:
     name: The evaluation tool's gates
