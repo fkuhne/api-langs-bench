@@ -2,6 +2,8 @@
 
 Each part of the repository has gates: checks that fail on a mistake, run in Docker the same way on every machine, and in CI on every push ([below](#in-ci)). They're about equally strict for every language ([0013](../spec/decisions/0013-gates-equally-strict-for-every-language.md)). They check the code, not its speed.
 
+A gate is one command that passes or fails. Nothing is installed on the machine but Docker: each gate's tools live in its image. The other pages are listed in [the guide](README.md).
+
 ## What runs
 
 | Command | Checks | Versions |
@@ -87,3 +89,14 @@ On the same Mac, with the checks image built and the caches warm: `fake-server-c
 - **Everything passed on x86-64 the first time,** though nothing had been built there before.
 - **The run takes as long as its slowest job,** about 2 min 15 s, with no cache. A cache isn't needed yet.
 - **The conformance job** spends about 1 minute building the three backends' images and its own, then about 55 s on its checks.
+
+**With the fake server, on 2026-11-10,** in [run 42857893952](https://github.com/fkuhne/api-langs-bench/actions/runs/42857893952) on commit `7bf50e3`, one attempt:
+
+| Job | Result | Time |
+|---|---|---|
+| The contract's lint | Clean | 14 s |
+| The Python backend's gates | 76 tests, 100% coverage | 21 s |
+| The Go backends' gates | 92.4% coverage | 2 min 4 s |
+| The fake server's gates | 97.7% coverage | 1 min 14 s |
+| The evaluation tool's gates | 155 tests, 100% coverage | 19 s |
+| The conformance suite | 321 passed | 2 min 35 s |

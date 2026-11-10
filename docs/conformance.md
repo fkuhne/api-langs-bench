@@ -1,6 +1,10 @@
 # The conformance suite
 
-One command checks that every backend answers the same requests the same way (R1), and that its fake keeps the contract's pace (R3):
+A benchmark that compares backends is only fair if each does exactly the same work. The conformance suite is what shows it. One command sends every backend the same requests, and checks two things:
+- **each answers the same way,** to the contract's letter: the same statuses, the same events, the same texts (R1);
+- **each one's fake keeps the contract's pace:** every token arrives at its time, never early, and never later than the machine's own timers explain (R3).
+
+It checks the fake upstream server the same way. The words used here, such as pace and lateness, are explained in [the guide](README.md#the-words-used-here).
 
 ```text
 docker compose run --rm conformance
@@ -10,8 +14,8 @@ pytest's options may follow, such as `-k go-gin` for one backend. Why it's built
 
 ## How it works
 
-- **Compose starts the three backends first,** building any image that's missing. After a backend's code changes, run `docker compose build` first.
-- **The suite restarts each backend itself,** with the settings each check needs, through Docker's socket. That socket gives its container root on Docker's host. At the end, each backend is left running with the settings `.env` gives.
+- **Compose starts the three backends and the fake server first,** building any image that's missing. After their code changes, run `docker compose build` first.
+- **The suite restarts each of them itself,** with the settings each check needs: the fakes' pace is a setting, read at start-up. It does so through Docker's socket, which gives its container root on Docker's host. At the end, each is left running with the settings `.env` gives.
 - **The checks** are in [`bench/conformance/`](../bench/conformance/), each run against each backend. Their parts are in [`bench/bench/`](../bench/bench/), with unit tests under `bench-checks`:
   - [`sse.py`](../bench/bench/sse.py) reads the stream strictly, and stamps each event with its arrival;
   - [`fake.py`](../bench/bench/fake.py) works out what the fakes answer, from the contract's rules. It's checked against the examples on the contract's page;
@@ -49,7 +53,7 @@ These read the fake server's JSON loosely: its fields are held to llama.cpp's by
 
 ## The pace rule
 
-An event's lateness is when it arrives, after the request was sent, less its due time. A paced stream passes three checks:
+An event's lateness is when it arrives, after the request was sent, less its due time. With the first token due at 100 ms, one that arrives 101.3 ms after the request went is 1.3 ms late. A paced stream passes three checks:
 - **No event early,** by any amount.
 - **Lateness doesn't add up:** the median lateness of the last quarter of events is within T of the first quarter's.
 - **The median lateness is within T.**
