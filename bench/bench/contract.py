@@ -57,12 +57,15 @@ class Contract:
 
 
 def _examples(page: str) -> Examples:
-    """The page's examples: its JSON blocks are the request, the whole answer and the failing
-    request; its first text block is the stream."""
+    """The page's examples. Its first two JSON blocks are the request and the whole answer; the
+    failing request is the first JSON block that asks for a `fake_error`; its first text block
+    is the stream. The page holds other JSON blocks, such as what a backend sends its upstream."""
     blocks: dict[str, list[str]] = {}
     for language, body in _BLOCK.findall(page):
         blocks.setdefault(language, []).append(body)
-    request, completion, failing_request = (json.loads(body) for body in blocks["json"][:3])
+    examples = [json.loads(body) for body in blocks["json"]]
+    request, completion = examples[:2]
+    failing_request = next(e for e in examples if "fake_error" in e.get("parameters", {}))
     return Examples(
         request=request,
         completion=completion,

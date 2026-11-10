@@ -175,3 +175,21 @@ go-gin via fake-server: 42 events, lateness median 6.76 ms, min 5.34, max 18.93;
 - **Why the tolerance is wider there.** The run before this one failed one check of 627: Python's stream through the fake server came 17.75 ms late at the median, against a T of 15.34 ms. Both Go servers were close, at 10.36 and 14.13 ms. Behind an upstream, an event crosses three late wake-ups in Docker's VM, not two: the fake server's timer, the backend's read, and the client's read. With 5 ms more, Python's 18.58 ms above is within its T of 20.19 ms.
 - **That's the Mac's VM again.** On Linux's timers the margin is loose in both cases; CI's lines will say how late each backend is there.
 - **Python is later than Go through the fake server,** by about 9 ms here against 2 to 5 ms alone. One stream at a time, on an idle VM, says little about load; plan step 2.4 measures it.
+
+**In CI, on Linux's timers,** three attempts of [run 42905293392](https://github.com/fkuhne/api-langs-bench/actions/runs/42905293392), on commit `658e24e`: 627 checks passed in each, in 170 to 174 s. The median lateness of each paced stream:
+
+| | Attempt 1 | Attempt 2 | Attempt 3 |
+|---|---|---|---|
+| The timer probe, median / p99 | 0.09 / 0.09 ms late | 0.09 / 0.10 ms | 0.09 / 0.10 ms |
+| The fake server, alone | 1.21 ms | 1.05 ms | 1.29 ms |
+| Python, from its own fake | 1.69 ms | 1.73 ms | 1.80 ms |
+| Python, through the fake server | 3.33 ms | 3.21 ms | 3.35 ms |
+| `net/http`, from its own fake | 1.12 ms | 1.14 ms | 1.11 ms |
+| `net/http`, through the fake server | 1.93 ms | 1.98 ms | 1.98 ms |
+| Gin, from its own fake | 1.15 ms | 1.11 ms | 1.14 ms |
+| Gin, through the fake server | 2.04 ms | 1.95 ms | 2.02 ms |
+
+- **No event early,** from either upstream, in any attempt. The smallest lateness through the fake server was 1.41 ms.
+- **Passing an upstream's stream on cost Go about 0.8 ms a token, and Python about 1.6 ms,** one stream at a time, on a shared VM. That's a first sight of what plan step 2.4 measures.
+- **The tolerance is loose there,** as before: 15.1 ms behind the fake server, against 3.4 ms at most.
+- **The evaluation tool's gates failed in that run,** on a test of the contract page's examples: the page had gained a JSON block, and the examples were found by their position. They're now found by what they hold. The mistake was ours: the gate had been run locally with its result hidden by a pipe.
