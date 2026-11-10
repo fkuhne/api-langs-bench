@@ -38,3 +38,4 @@ Don't rewrite a record to change its decision. Write a new record and mark the o
 | [0015](0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md) | Keep Docker, and take the report's timing numbers from native Linux | Accepted | 2026-11-09 |
 | [0016](0016-two-go-backends-net-http-and-gin-in-one-module.md) | Two Go backends, net/http and Gin, in one module | Accepted | 2026-11-09 |
 | [0017](0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md) | The conformance suite: pytest that drives Compose, and a pace rule from the machine's timers | Accepted | 2026-11-09 |
+| [0018](0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md) | The first runner: oha as the load generator, one streamed workload, and runs committed as JSON | Proposed | 2026-11-09 |
