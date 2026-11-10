@@ -244,9 +244,9 @@ What these numbers are:
 
 ### Why every file says dirty
 
-Every one of the 36 files has `"dirty": true`, which says a tracked file differed from commit `0fe92be`. The likely cause, reproduced on the Mac on 2026-11-10 but not confirmed on that machine:
+Every one of the 36 files has `"dirty": true`, which says a tracked file differed from commit `0fe92be`. The likely cause, reproduced on the Mac on 2026-11-10 and confirmed in part on that machine (below):
 - **Git for Windows checks text files out with CRLF line endings,** from a `core.autocrlf` it sets outside the repository.
 - **The runner reads the repository from inside a container,** where that setting can't be seen. So each file's CRLF content looks like a change.
 - **A clone made that way read as dirty,** in 180 of its 183 tracked files, at commit `a3fd6e4`. The same clone with the setting in its own config, and a clone with LF endings, read as clean.
 
-To confirm on that machine: `git status` says the tree is clean, and `git config --show-origin core.autocrlf` names a file outside the repository. A fix, such as a `.gitattributes` that keeps LF endings everywhere, is a decision still to make ([0018](../spec/decisions/0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md)).
+**Checked on that machine by the owner, 2026-11-10:** `git status` says the tree is clean, and `git config --show-origin core.autocrlf` says `true`. That fits the cause. Which file sets it wasn't reported, so whether it sits outside the repository is unchecked. A fix, such as a `.gitattributes` that keeps LF endings everywhere, is a decision still to make ([0018](../spec/decisions/0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md)).
