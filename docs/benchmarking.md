@@ -82,7 +82,7 @@ As summarised by a search on 2026-11-05, from NVIDIA's documentation and the DEV
 - **Open and closed models:** in [k6's closed model](https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/), the default, a virtual user's next iteration starts only when the last one ends. Its arrival-rate executors are open: requests arrive at a set rate, whatever the server does.
 - **wrk2** sends at a constant rate, and its latency includes the time queued.
 - **Vegeta** is open-loop.
-- **oha** is reported to have a `--latency-correction` flag. That rests on one blog post, unverified.
+- **oha** has a `--latency-correction` flag, which counts a request's latency from when it was due. With too few connections on purpose, its p50 was 3.2 s corrected and 241 ms not. Requests still due when the time ends are never sent, so the rate reached must be checked too ([our run, 2026-11-09](runner.md#the-load-generator-measured-alone)).
 
 - **A client that leaves may not close its connection at once.** Go 1.27.3's HTTP client, when a response's body is closed early, reads on for up to 50 ms or 256 KiB to reuse the connection, then closes it (`maxPostCloseReadTime`, in `net/http/transport.go`). A backend sees the client leave only then: 51 ms late, in our run ([backends](backends.md#go-nethttp)). The load generator that measures a client's leaving (plan step 3.3) must close its connection, such as with keep-alive off.
 

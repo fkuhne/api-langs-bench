@@ -1,6 +1,6 @@
 # 0018. The first runner: oha as the load generator, one streamed workload, and runs committed as JSON
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-09
 
 ## Context
@@ -29,6 +29,7 @@ The first runner is `docker compose run --rm runner`, in Python, in `bench/`. It
 - **The load generator is oha 1.16.0,** its binary copied into the runner's image, and run by the runner on Compose's network. It runs with:
   - `-q`, the rate, and `--latency-correction`, so a request's latency counts from when it was due to be sent;
   - `-z`, the duration, and `-w`, so requests open at the end are waited for, not cut;
+  - `-t 30s`, so a request with no answer after 30 s counts as an error;
   - `--output-format json`.
 - **What reads each event of a stream** is decided at plan step 3.3, which needs it. A client of our own can then be checked against oha.
 - **The one workload,** named `stream-20`:
@@ -74,16 +75,19 @@ The first runner is `docker compose run --rm runner`, in Python, in `bench/`. It
 
 ## Assumptions to verify
 
-- [ ] oha's ceiling is well beyond the workload's rate on the machine that runs it. To check in this step.
-- [ ] oha's latency against the paced fake agrees with the conformance suite's own client, within the machine's timer error. To check in this step.
-- [ ] With `--latency-correction`, a request that waits for a free connection has its wait counted. To check in this step, with too few connections on purpose.
-- [ ] oha's percentiles match the per-request times it writes with `--db-url`. To check in this step.
-- [ ] oha sends its requests evenly, not in bursts each second. To check in this step, from the per-request times.
-- [ ] dulwich reads the commit, and whether tracked files changed, from a repository mounted read-only. To check in this step.
+- [x] oha's ceiling is well beyond the workload's rate on the machine that runs it. To check in this step. *2026-11-09: 163,411 requests a second against `go-nethttp`'s liveness, 1,600 times the rate ([runner](../../docs/runner.md#the-load-generator-measured-alone)).*
+- [x] oha's latency against the paced fake agrees with the conformance suite's own client, within the machine's timer error. To check in this step. *2026-11-09: oha saw streams due at 240 ms end 1.3 ms late at the median; the suite's client saw 4.1 to 5.0 ms, one stream at a time. Under load, the VM's timers are tighter ([runner](../../docs/runner.md#the-load-generator-measured-alone)).*
+- [x] With `--latency-correction`, a request that waits for a free connection has its wait counted. To check in this step, with too few connections on purpose. *2026-11-09: with 10 connections, the p50 was 3,207.7 ms corrected and 241.3 ms not. But requests still due when the time ends are never sent, so a run records whether its rate was kept ([runner](../../docs/runner.md#the-load-generator-measured-alone)).*
+- [x] oha's percentiles match the per-request times it writes with `--db-url`. To check in this step. *2026-11-09: the p50 is the same to the microsecond; the p95 and p99 are within 0.06 ms ([runner](../../docs/runner.md#the-load-generator-measured-alone)).*
+- [x] oha sends its requests evenly, not in bursts each second. To check in this step, from the per-request times. *2026-11-09: partly. The gap between due times was 9.98 ms at the median, but from 0.001 to 27.5 ms on this Mac: when oha's own timer wakes late, the next requests are due late, then close together ([runner](../../docs/runner.md#the-load-generator-measured-alone)).*
+- [ ] On native Linux, oha's due times keep an even gap. To check on the report's machine (plan step 6.2).
+- [ ] oha's time to the first byte is the body's first byte, so the first token of a stream. The numbers say so; to check in oha's code at plan step 2.4.
+- [x] dulwich reads the commit, and whether tracked files changed, from a repository mounted read-only. To check in this step. *2026-11-09: it read the commit with `dirty` true while files were changed, and false in the first runs, made from a clean tree with new runs untracked ([runner](../../docs/runner.md#the-first-runs-on-2026-11-09)).*
 
 ## Sources
 
 - GitHub's API for each tool's latest release and last push, 2026-11-09.
 - oha 1.16.0's `--help` and JSON output, and our runs of it against `go-nethttp`, 2026-11-09.
 - Search summaries on k6's and vegeta's handling of streams, 2026-11-09: [xk6-sse's package page](https://beta.pkg.go.dev/github.com/phymbert/xk6-sse), and [a mirror of vegeta's documentation](https://docsearch.algolia.com/mcp/docs/repo/tsenart/vegeta).
+- Our runs on 2026-11-09 ([runner](../../docs/runner.md)).
 - The owner's picks, 2026-11-09.

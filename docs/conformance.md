@@ -41,7 +41,7 @@ An event's lateness is when it arrives, after the request was sent, less its due
 - **Lateness doesn't add up:** the median lateness of the last quarter of events is within T of the first quarter's.
 - **The median lateness is within T.**
 
-**T is the machine's timer error plus a margin of 10 ms.** The timer error is the p99 lateness of a probe the suite runs first, in its own container: 200 sleeps, each to a deadline 10 ms after the last one's. A single event, such as the whole answer, is asked for 5 times, and its median lateness must be within T.
+**T is the machine's timer error plus a margin of 10 ms.** The timer error is the p99 lateness of a probe the suite runs first, in its own container: 200 sleeps, each to a deadline 10 ms after the last one's. A single event, such as the whole answer, is asked for 5 times, and its median lateness must be within T. The timed stream is a backend's second: its first request on a new connection took 7 to 12 ms to send its headers, against 1 to 2 ms afterwards, and that isn't the fake's pace.
 
 **Why 10 ms, not 5.** With a margin of 5 ms, the first run failed the Python backend, which is correct, twice: a failure due at 160 ms came 7.7 and 12.0 ms late at the median, against a T of 7.6 ms. A single event after a long wait is later than the probe's sleeps: 20 requests each, measured after that run, gave these medians:
 

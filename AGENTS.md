@@ -40,6 +40,7 @@ What the project covers is in [`spec/product.md`](spec/product.md). What we know
 Every command is a Docker command, the same in PowerShell, cmd and POSIX shells. What each gate runs, and how long it takes, is in [`docs/gates.md`](docs/gates.md); each backend's set-up and measurements are in [`docs/backends.md`](docs/backends.md).
 - `docker compose up -d --wait python-fastapi` starts the Python backend on `127.0.0.1:8001`, `go-nethttp` the Go backend on `net/http` on `127.0.0.1:8002`, and `go-gin` the one on Gin on `127.0.0.1:8003`; `docker compose down` stops everything.
 - `docker compose run --rm conformance` checks every backend against the contract, and its fake's pace ([`docs/conformance.md`](docs/conformance.md)). It restarts the backends through Docker's socket. After a backend's code changes, run `docker compose build` first.
+- `docker compose run --rm runner` sends the workload to each backend in turn, and saves each run once in `runs/` ([`docs/runner.md`](docs/runner.md)). `--backend go-gin` runs one. Set `BENCH_MACHINE` in `.env` first, to describe the host.
 - `docker compose run --rm contract-checks` lints the contract's OpenAPI file.
 - `docker compose run --rm python-fastapi-checks` runs the Python backend's gates: ruff, ruff format, `mypy --strict`, and pytest with 90% coverage.
 - `docker compose run --rm go-checks` runs the Go backends' gates: golangci-lint, then `go test -race` with 90% coverage.
