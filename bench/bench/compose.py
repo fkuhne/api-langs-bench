@@ -1,8 +1,9 @@
-"""Starts a backend with the settings a check needs, through Docker Compose (spec/decisions/0017).
+"""Starts a backend with the settings a check or a run needs, through Docker Compose
+(spec/decisions/0017).
 
-The conformance service holds Docker's socket and the repository, read-only, at `/repo`, so the
-Compose inside it drives the same project as the one outside: the same `compose.yaml`, `.env`
-and containers.
+The conformance and runner services hold Docker's socket and the repository, read-only, at
+`/repo`, so the Compose inside them drives the same project as the one outside: the same
+`compose.yaml`, `.env` and containers.
 """
 
 import json
@@ -11,6 +12,7 @@ import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 # Where the conformance image puts Docker's binary, and its service mounts the repository.
 DOCKER = "/usr/local/bin/docker"
@@ -97,8 +99,31 @@ class Compose:
         """The last lines `service`'s container wrote."""
         return self._output("logs", "--no-color", "--tail", str(lines), service)
 
+    def stop(self, *services: str) -> None:
+        """Stops these services' containers, and keeps them."""
+        self._output("stop", *services)
+
+    def image(self, service: str) -> str:
+        """The ID of the image `service`'s one container was made from."""
+        images = json.loads(self._output("images", "--format", "json", service))
+        if len(images) != 1:
+            raise ComposeError(f"{service} has {len(images)} containers, not one")
+        return str(images[0]["ID"])
+
+    def version(self) -> str:
+        """This Compose's version."""
+        return self._output("version", "--short").strip()
+
+    def docker_info(self) -> dict[str, Any]:
+        """What Docker's daemon says of itself and its machine, as `docker info` gives it."""
+        info: dict[str, Any] = json.loads(self._capture([DOCKER, "info", "--format", "{{json .}}"]))
+        return info
+
     def _output(self, *arguments: str) -> str:
-        result = self._run([*self._command, *arguments], self._environment)
+        return self._capture([*self._command, *arguments])
+
+    def _capture(self, command: Sequence[str]) -> str:
+        result = self._run(command, self._environment)
         if result.returncode != 0:
-            raise ComposeError(f"`docker compose {' '.join(arguments)}` failed: {result.stderr}")
+            raise ComposeError(f"`{' '.join(command[1:])}` failed: {result.stderr}")
         return result.stdout

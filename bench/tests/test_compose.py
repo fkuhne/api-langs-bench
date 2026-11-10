@@ -83,6 +83,40 @@ def test_state_fails_without_exactly_one_container() -> None:
         compose(Docker((0, "\n", ""))).state("go-gin")
 
 
+def test_stop_stops_every_service_named() -> None:
+    docker = Docker((0, "", ""))
+
+    compose(docker).stop("go-gin", "go-nethttp")
+
+    assert docker.calls[0][0] == [*BASE, "stop", "go-gin", "go-nethttp"]
+
+
+def test_image_is_the_id_of_the_one_containers_image() -> None:
+    docker = Docker((0, '[{"ID":"sha256:0b89","ContainerName":"api-langs-bench-go-gin-1"}]\n', ""))
+
+    assert compose(docker).image("go-gin") == "sha256:0b89"
+    assert docker.calls[0][0] == [*BASE, "images", "--format", "json", "go-gin"]
+
+
+def test_image_fails_without_exactly_one_container() -> None:
+    with pytest.raises(ComposeError, match="has 0 containers"):
+        compose(Docker((0, "[]", ""))).image("go-gin")
+
+
+def test_version_is_composes_own() -> None:
+    docker = Docker((0, "5.1.4\n", ""))
+
+    assert compose(docker).version() == "5.1.4"
+    assert docker.calls[0][0] == [*BASE, "version", "--short"]
+
+
+def test_docker_info_is_what_the_daemon_says() -> None:
+    docker = Docker((0, '{"NCPU": 4, "ServerVersion": "29.5.2"}\n', ""))
+
+    assert compose(docker).docker_info() == {"NCPU": 4, "ServerVersion": "29.5.2"}
+    assert docker.calls[0][0] == [DOCKER, "info", "--format", "{{json .}}"]
+
+
 def test_a_failed_command_fails_with_its_errors() -> None:
     with pytest.raises(ComposeError, match="no such service: go-fiber"):
         compose(Docker((1, "", "no such service: go-fiber"))).state("go-fiber")

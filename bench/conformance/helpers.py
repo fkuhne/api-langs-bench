@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx2
 
+from bench.backends import url
 from bench.compose import Compose
 from bench.contract import Contract
 from bench.fake import Answer, FakeSettings, answer
@@ -73,7 +74,7 @@ class Backend:
         if self._serving is None or self._serving.settings != settings:
             self.forget()
             self._compose.start(self.service, settings.environment())
-            client = httpx2.Client(base_url=f"http://{self.service}:8000", timeout=10)
+            client = httpx2.Client(base_url=url(self.service), timeout=10)
             self._serving = Served(client, settings)
         return self._serving
 

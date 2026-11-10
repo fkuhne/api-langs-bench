@@ -10,14 +10,12 @@ from collections.abc import Iterator
 
 import pytest
 
+from bench.backends import BACKENDS
 from bench.compose import Compose
 from bench.contract import Contract
 from bench.fake import FakeSettings
 from bench.pace import PROBE_GAP_MS, PROBE_SLEEPS, Tolerance, probe
 from conformance.helpers import Backend, Check, Served
-
-# Every backend the suite checks, by its Compose service. Each listens on port 8000.
-BACKENDS = ("python-fastapi", "go-nethttp", "go-gin")
 
 DEFAULTS = FakeSettings()
 # The first token at 100 ms, then one every 20 ms: 2 reasoning tokens, then 40 answer tokens.
