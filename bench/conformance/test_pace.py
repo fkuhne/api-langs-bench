@@ -27,6 +27,9 @@ def test_the_stream_keeps_the_pace(
     paced: Served, check: Check, tolerance: Tolerance, backend: Backend, report: list[str]
 ) -> None:
     body = {"messages": HI}
+    # One stream first, untimed: a backend's first request on a new connection is slower, and
+    # that isn't its fake's pace.
+    stream(paced.client, body)
     streamed = stream(paced.client, body)
     expected = paced.expect(body, check.tokens)
     assert check.events(streamed) == expected_events(expected)
