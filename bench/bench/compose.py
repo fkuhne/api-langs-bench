@@ -62,9 +62,10 @@ class Compose:
         self._run = run
         self._environment = dict(os.environ if environment is None else environment)
 
-    def up(self, service: str, settings: Mapping[str, str]) -> bool:
-        """Starts `service` with `settings` over this process's environment, recreating it if they
-        changed, and waits until it's healthy. False if it didn't get there."""
+    def up(self, service: str, settings: Mapping[str, str], *, fresh: bool = False) -> bool:
+        """Starts `service` with `settings` over this process's environment, and waits until it's
+        healthy. Its container is made again if they changed, or always if `fresh`. False if it
+        didn't get there."""
         result = self._run(
             [
                 *self._command,
@@ -75,15 +76,16 @@ class Compose:
                 str(WAIT_TIMEOUT_S),
                 "--no-build",
                 "--no-deps",
+                *(["--force-recreate"] if fresh else []),
                 service,
             ],
             self._environment | dict(settings),
         )
         return result.returncode == 0
 
-    def start(self, service: str, settings: Mapping[str, str]) -> None:
+    def start(self, service: str, settings: Mapping[str, str], *, fresh: bool = False) -> None:
         """Starts `service` with `settings`, or fails with its last logs."""
-        if not self.up(service, settings):
+        if not self.up(service, settings, fresh=fresh):
             raise ComposeError(f"{service} didn't start:\n{self.logs(service)}")
 
     def state(self, service: str) -> State:
@@ -109,6 +111,16 @@ class Compose:
         if len(images) != 1:
             raise ComposeError(f"{service} has {len(images)} containers, not one")
         return str(images[0]["ID"])
+
+    def limits(self, service: str) -> dict[str, float | int]:
+        """The CPU and memory limits Docker holds `service`'s one container to; 0 for none."""
+        containers = self._output("ps", "--quiet", service).split()
+        if len(containers) != 1:
+            raise ComposeError(f"{service} has {len(containers)} containers running, not one")
+        template = "{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}}"
+        inspected = self._capture([DOCKER, "inspect", "--format", template, *containers])
+        nano_cpus, memory = inspected.split()
+        return {"cpus": int(nano_cpus) / 1e9, "memory_bytes": int(memory)}
 
     def version(self) -> str:
         """This Compose's version."""

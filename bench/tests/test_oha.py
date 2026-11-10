@@ -21,7 +21,7 @@ def test_the_command_sends_the_workload_open_loop() -> None:
 
     assert command == [
         *("/usr/local/bin/oha", "--no-tui", "--output-format", "json"),
-        *("-z", "30s", "-w", "-q", "100", "--latency-correction", "-c", "256", "-t", "30s"),
+        *("-z", "30s", "-w", "-q", "100", "--latency-correction", "-c", "96", "-t", "30s"),
         *("-m", "POST", "-T", "application/json"),
         *("-d", json.dumps(STREAM_20.body)),
         "http://go-gin:8000/api/chat/stream",

@@ -3,7 +3,7 @@
 from bench.backends import BACKENDS, url
 from bench.contract import Contract
 from bench.fake import answer
-from bench.workload import STREAM_20
+from bench.workload import RATES, STREAM_20
 
 CHAT_REQUEST = "#/components/schemas/ChatRequest"
 
@@ -17,13 +17,23 @@ def test_each_stream_is_due_to_end_at_240_ms() -> None:
 
     got = answer(STREAM_20.settings, Contract().tokens, body["messages"], body["parameters"])
 
-    assert (len(got.content), got.due_ms) == (20, 240)
+    assert (len(got.content), got.due_ms) == (20, STREAM_20.due_ms) == (20, 240)
 
 
-def test_the_connections_are_far_more_than_the_rate_needs() -> None:
-    open_at_once = STREAM_20.rate * 240 / 1000
+def test_the_connections_are_four_times_the_streams_open_at_once() -> None:
+    assert [STREAM_20.at(rate).connections for rate in RATES] == [96, 480, 960, 1920]
+    assert STREAM_20.at(3).connections == 3
 
-    assert STREAM_20.connections >= 10 * open_at_once
+
+def test_another_rate_changes_nothing_else() -> None:
+    faster = STREAM_20.at(500)
+
+    assert faster.rate == 500
+    assert (faster.name, faster.body, faster.settings) == (
+        STREAM_20.name,
+        STREAM_20.body,
+        STREAM_20.settings,
+    )
 
 
 def test_a_run_records_the_whole_workload() -> None:
@@ -35,7 +45,8 @@ def test_a_run_records_the_whole_workload() -> None:
         "rate_per_s": 100,
         "duration_s": 30,
         "warmup_s": 5,
-        "connections": 256,
+        "connections": 96,
+        "due_ms": 240,
         "settings": {
             "LLM_PROVIDER": "fake",
             "FAKE_ANSWER_TOKENS": "256",

@@ -46,6 +46,31 @@ def test_up_waits_for_the_service_with_its_settings_over_the_environment() -> No
     assert environment == {"PATH": "/bin", "FAKE_TOKEN_GAP_MS": "20"}
 
 
+def test_a_fresh_start_makes_the_container_again() -> None:
+    docker = Docker((0, "", ""))
+
+    compose(docker).start("go-gin", {}, fresh=True)
+
+    assert docker.calls[0][0][-2:] == ["--force-recreate", "go-gin"]
+
+
+def test_limits_are_what_docker_holds_the_container_to() -> None:
+    docker = Docker((0, "f198ed0e450c\n", ""), (0, "1000000000 536870912\n", ""))
+
+    assert compose(docker).limits("go-gin") == {"cpus": 1.0, "memory_bytes": 536870912}
+    assert docker.calls[0][0] == [*BASE, "ps", "--quiet", "go-gin"]
+    assert docker.calls[1][0] == [
+        *(DOCKER, "inspect", "--format"),
+        "{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}}",
+        "f198ed0e450c",
+    ]
+
+
+def test_limits_fail_without_exactly_one_running_container() -> None:
+    with pytest.raises(ComposeError, match="has 0 containers running"):
+        compose(Docker((0, "\n", ""))).limits("go-gin")
+
+
 def test_up_is_false_when_the_service_doesnt_get_healthy() -> None:
     assert compose(Docker((1, "", "container exited (1)"))).up("go-gin", {}) is False
 

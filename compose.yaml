@@ -6,6 +6,9 @@
 
 name: api-langs-bench
 
+# Each backend's limits, the same for every backend, provisional until plan step 3.1
+# (spec/decisions/0020). They're repeated in each backend's service: `cpus` and `mem_limit`.
+
 # The contract's settings, the same for every backend (contract/README.md#settings).
 x-backend-environment: &backend-environment
   LLM_PROVIDER: ${LLM_PROVIDER:-fake}
@@ -23,6 +26,8 @@ services:
       additional_contexts:
         contract: contract
     environment: *backend-environment
+    cpus: ${BACKEND_CPUS:-1}
+    mem_limit: ${BACKEND_MEMORY:-512m}
     ports:
       - 127.0.0.1:${PYTHON_FASTAPI_PORT:-8001}:8000
     healthcheck:
@@ -47,6 +52,8 @@ services:
       additional_contexts:
         contract: contract
     environment: *backend-environment
+    cpus: ${BACKEND_CPUS:-1}
+    mem_limit: ${BACKEND_MEMORY:-512m}
     ports:
       - 127.0.0.1:${GO_NETHTTP_PORT:-8002}:8000
     # The image has no shell, so the server asks itself (spec/decisions/0016).
@@ -71,6 +78,8 @@ services:
       additional_contexts:
         contract: contract
     environment: *backend-environment
+    cpus: ${BACKEND_CPUS:-1}
+    mem_limit: ${BACKEND_MEMORY:-512m}
     ports:
       - 127.0.0.1:${GO_GIN_PORT:-8003}:8000
     healthcheck:
@@ -199,10 +208,13 @@ services:
       PYTHON_FASTAPI_PORT: ${PYTHON_FASTAPI_PORT:-8001}
       GO_NETHTTP_PORT: ${GO_NETHTTP_PORT:-8002}
       GO_GIN_PORT: ${GO_GIN_PORT:-8003}
+      BACKEND_CPUS: ${BACKEND_CPUS:-1}
+      BACKEND_MEMORY: ${BACKEND_MEMORY:-512m}
 
   # The runner: docker compose run --rm runner
-  # `--backend go-gin` may follow, for one backend. It sends one workload to each backend in
-  # turn, the others stopped, and saves each run once in runs/ (spec/decisions/0018). Like the
+  # `--backend go-gin`, `--rate 100` and `--passes 1` may follow. It sends one workload, at a
+  # ladder of rates, to each backend in turn, the others stopped, in three passes, and saves
+  # each run once in runs/ (spec/decisions/0018, spec/decisions/0020). Like the
   # conformance suite, it starts the backends through Docker's socket, and leaves each running
   # with the settings below.
   runner:
@@ -230,7 +242,15 @@ services:
       PYTHON_FASTAPI_PORT: ${PYTHON_FASTAPI_PORT:-8001}
       GO_NETHTTP_PORT: ${GO_NETHTTP_PORT:-8002}
       GO_GIN_PORT: ${GO_GIN_PORT:-8003}
+      BACKEND_CPUS: ${BACKEND_CPUS:-1}
+      BACKEND_MEMORY: ${BACKEND_MEMORY:-512m}
       BENCH_MACHINE: ${BENCH_MACHINE:-}
+    # One open file for each connection: the default, 1,024, fails requests at the higher rates
+    # (spec/decisions/0020).
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
   # Rewrites a Python project's uv.lock after its dependencies change, then rebuild its checks:
   #   docker compose run --rm python-lock bench
