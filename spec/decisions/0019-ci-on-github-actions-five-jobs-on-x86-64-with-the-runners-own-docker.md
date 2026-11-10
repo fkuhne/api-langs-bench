@@ -1,6 +1,6 @@
 # 0019. CI on GitHub Actions: five jobs on x86-64, with the runner's own Docker
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-09
 
 ## Context
@@ -16,7 +16,7 @@ What was checked on 2026-11-09:
 
 ## Decision
 
-CI is one GitHub Actions workflow, `.github/workflows/ci.yml`, with five jobs side by side, on every push and pull request. Each job runs on `ubuntu-24.04`, with the runner's own Docker and Compose, and runs one of the repository's own commands:
+CI is one GitHub Actions workflow, [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), with five jobs side by side, on every push and pull request. Each job runs on `ubuntu-24.04`, with the runner's own Docker and Compose, and runs one of the repository's own commands:
 
 | Job | Command |
 |---|---|
@@ -56,15 +56,16 @@ CI is one GitHub Actions workflow, `.github/workflows/ci.yml`, with five jobs si
 
 ## Assumptions to verify
 
-- [ ] Every image builds and every gate passes on x86-64. To check in this step.
-- [ ] The conformance suite drives the runner's Docker 28.0.4 through its socket, with the Compose 5.1.4 inside its image. To check in this step. This also answers part of [0017](0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md)'s question about the socket on other hosts.
-- [ ] The pace checks pass on GitHub's runner. To check in this step, over several runs.
-- [ ] The slowest job takes under 10 minutes without a cache. To check in this step.
-- [ ] `docker compose run` needs no terminal in CI. To check in this step.
+- [x] Every image builds and every gate passes on x86-64. To check in this step. *2026-11-10: every job passed, in three attempts out of three ([gates](../../docs/gates.md#in-ci)).*
+- [x] The conformance suite drives the runner's Docker 28.0.4 through its socket, with the Compose 5.1.4 inside its image. To check in this step. *2026-11-10: it did, 288 checks passed ([conformance](../../docs/conformance.md#in-ci-on-2026-11-10)).* This also answers part of [0017](0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md)'s question about the socket on other hosts.
+- [x] The pace checks pass on GitHub's runner. To check in this step, over several runs. *2026-11-10: three attempts out of three, with every median lateness under 2.6 ms against a tolerance of 10.1 ms ([conformance](../../docs/conformance.md#in-ci-on-2026-11-10)).*
+- [x] The slowest job takes under 10 minutes without a cache. To check in this step. *2026-11-10: the conformance suite's, 2 min 2 s to 2 min 15 s ([gates](../../docs/gates.md#in-ci)).*
+- [x] `docker compose run` needs no terminal in CI. To check in this step. *2026-11-10: every job ran without one ([gates](../../docs/gates.md#in-ci)).*
 
 ## Sources
 
 - [GitHub's Ubuntu 24.04 runner image README](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md), read on 2026-11-09.
 - GitHub's API for `actions/checkout`'s latest release and its commit, and for the repository's Actions settings, 2026-11-09.
 - `docker buildx imagetools inspect` of every pinned image, 2026-11-09.
+- CI's runs on 2026-11-10 ([gates](../../docs/gates.md#in-ci)).
 - The owner's picks, 2026-11-09.

@@ -1,6 +1,6 @@
 # The gates
 
-Each part of the repository has gates: checks that fail on a mistake, run in Docker the same way on every machine, and in CI from plan step 1.7. They're about equally strict for every language ([0013](../spec/decisions/0013-gates-equally-strict-for-every-language.md)). They check the code, not its speed.
+Each part of the repository has gates: checks that fail on a mistake, run in Docker the same way on every machine, and in CI on every push ([below](#in-ci)). They're about equally strict for every language ([0013](../spec/decisions/0013-gates-equally-strict-for-every-language.md)). They check the code, not its speed.
 
 ## What runs
 
@@ -60,3 +60,25 @@ On the same machine, after plan step 1.4 added the two Go backends and Gin's dep
 - **Why the caches:** before them, every run started with an empty build cache in `/tmp`, and compiled Gin and its dependencies with the race detector: 85 and 90 s for two warm runs.
 - **The modules are in the image.** The checks image had fetched them into a BuildKit cache mount, which never reaches the image, so each run downloaded them again. Now `go vet ./...` runs in it with networking off.
 - **Disk:** the build cache volume holds 492.8 MB, and golangci-lint's 0.7 MB. The checks image is 387 MB compressed.
+
+## In CI
+
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs each gate, and the [conformance suite](conformance.md), on every push and pull request, in GitHub Actions ([0019](../spec/decisions/0019-ci-on-github-actions-five-jobs-on-x86-64-with-the-runners-own-docker.md)). Each of its five jobs runs one of the commands above, on its own runner, with no cache and no secret.
+
+**The runner,** from each job's log on 2026-11-10:
+- `ubuntu-24.04`, image 20261101.360.1, x86-64, 4 CPUs and 16 GB;
+- Docker 28.0.4 and Compose 2.38.2: older than the Mac's 29.5.2 and 5.5.1. The conformance suite's own Compose, 5.1.4, drove it through the socket.
+
+**Three attempts of the first run,** [42745505829](https://github.com/fkuhne/api-langs-bench/actions/runs/42745505829), on commit `4e67dfd`, each job timed by GitHub:
+
+| Job | Result | Time, three attempts |
+|---|---|---|
+| The contract's lint | Clean | 11, 9 and 9 s |
+| The Python backend's gates | 72 tests, 100% coverage | 21, 19 and 22 s |
+| The Go backends' gates | 0 issues; 92.4% coverage | 1 min 53 s, 2 min 4 s, 2 min 3 s |
+| The evaluation tool's gates | 147 tests, 100% coverage | 25, 20 and 19 s |
+| The conformance suite | 288 passed | 2 min 2 s, 2 min 11 s, 2 min 15 s |
+
+- **Everything passed on x86-64 the first time,** though nothing had been built there before.
+- **The run takes as long as its slowest job,** about 2 min 15 s, with no cache. A cache isn't needed yet.
+- **The conformance job** spends about 1 minute building the three backends' images and its own, then about 55 s on its checks.

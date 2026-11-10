@@ -1,5 +1,7 @@
 # api-langs-bench
 
+[![CI](https://github.com/fkuhne/api-langs-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/fkuhne/api-langs-bench/actions/workflows/ci.yml)
+
 The same AI backend, written in several programming languages and measured on the same machine. Every backend serves one chat API, whole and streamed, in front of an LLM. An evaluation tool sends every backend the same load and records what it does:
 - latency, and the time to the first token;
 - how it passes the stream on;
@@ -8,7 +10,7 @@ The same AI backend, written in several programming languages and measured on th
 
 Python and Go come first; Rust, Java, JavaScript and C++ follow. Fakes stand in for the LLM where its seconds would hide the backend's own cost.
 
-**Status:** starting. The spec and the contract every backend implements are written, and each part's gates run in Docker ([`docs/gates.md`](docs/gates.md)). The Python backend and two Go backends, on `net/http` and on Gin, serve it ([`docs/backends.md`](docs/backends.md)); a conformance suite checks all three against it ([`docs/conformance.md`](docs/conformance.md)). A first runner sends one workload to each backend and saves each run in [`runs/`](runs/README.md) ([`docs/runner.md`](docs/runner.md)). CI comes next.
+**Status:** starting. The spec and the contract every backend implements are written, and each part's gates run in Docker ([`docs/gates.md`](docs/gates.md)). The Python backend and two Go backends, on `net/http` and on Gin, serve it ([`docs/backends.md`](docs/backends.md)); a conformance suite checks all three against it ([`docs/conformance.md`](docs/conformance.md)). A first runner sends one workload to each backend and saves each run in [`runs/`](runs/README.md) ([`docs/runner.md`](docs/runner.md)). CI runs the gates and the suite on every push ([`docs/gates.md`](docs/gates.md#in-ci)). The first numbers come next.
 
 ## Where to start
 

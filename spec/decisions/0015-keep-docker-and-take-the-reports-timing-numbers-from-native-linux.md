@@ -50,7 +50,7 @@ Docker stays, as in [0008](0008-run-anywhere-with-docker-and-record-the-machine.
 
 ## Assumptions to verify
 
-- [ ] On native Linux, a 20 ms sleep in a container wakes within 1 ms at the median, whether the machine is idle or busy. To check on the report's machine before its first run.
+- [ ] On native Linux, a 20 ms sleep in a container wakes within 1 ms at the median, whether the machine is idle or busy. To check on the report's machine before its first run. *2026-11-10, a first sign: in GitHub's Linux VM, 10 ms sleeps in a container woke 0.08 to 0.11 ms late at the median ([conformance](../../docs/conformance.md#in-ci-on-2026-11-10)). That's a cloud VM, idle, not native Linux under load.*
 - [ ] Docker's NAT adds latency at high packet rates, and host networking matches native. To check in Felter et al.'s tables, or by a run, at plan step 3.1.
 
 ## Sources

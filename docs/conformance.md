@@ -88,3 +88,19 @@ Over the ten runs, the last quarter's lateness was between 1.1 ms earlier and 1.
 | The whole answer is one token short | 50 checks, on both servers |
 
 **Disk:** the conformance image is 128.6 MB compressed, against 100.2 MB for the checks image it's built on. Docker's images take 29.01 GB in all, 0.8 GB more than before this step.
+
+## In CI, on 2026-11-10
+
+On GitHub's `ubuntu-24.04` runner: x86-64, 4 CPUs, 16 GB, Docker 28.0.4 and Compose 2.38.2 ([gates](gates.md#in-ci)). Three attempts of [run 42745505829](https://github.com/fkuhne/api-langs-bench/actions/runs/42745505829):
+
+| | Attempt 1 | Attempt 2 | Attempt 3 |
+|---|---|---|---|
+| Checks | 288 passed in 52.6 s | 288 passed in 56.4 s | 288 passed in 56.0 s |
+| The timer probe, median / p99 | 0.09 / 0.09 ms late | 0.11 / 0.13 ms | 0.08 / 0.14 ms |
+| Python's stream, median lateness | 1.15 ms | 2.05 ms | 2.58 ms |
+| `net/http`'s | 1.19 ms | 1.31 ms | 1.55 ms |
+| Gin's | 1.13 ms | 1.38 ms | 1.60 ms |
+| The last quarter on the first, widest | +0.16 ms | +0.11 ms | -0.03 ms |
+
+- **Linux's timers in a cloud VM are 20 times tighter than Docker's VM on the Mac:** 0.1 ms late against about 2 ms. The streams came 1 to 3 ms late, against 4 to 8 ms on the Mac.
+- **So the 10 ms margin is loose there.** T was 10.1 ms, and every backend's median lateness was below 2.6 ms. A fake that sleeps one gap after each token would drift by its own overhead on each token, about 0.1 ms here (computed), or 3 ms over a stream. That passes a T of 10 ms. Whether the margin should shrink on Linux stays open in [0017](../spec/decisions/0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md).

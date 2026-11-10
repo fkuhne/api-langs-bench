@@ -75,9 +75,9 @@ The conformance suite is a pytest suite in `bench/conformance/`, run with `docke
 
 ## Assumptions to verify
 
-- [ ] Mounting `/var/run/docker.sock` works the same with Docker Desktop on macOS and on Windows. Unchecked; to check in CI (plan step 1.7) and on the report's second machine (plan step 6.2).
+- [ ] Mounting `/var/run/docker.sock` works the same with Docker Desktop on macOS and on Windows. Unchecked; to check in CI (plan step 1.7) and on the report's second machine (plan step 6.2). *2026-11-10: it works on GitHub's Linux runner, with Docker 28.0.4 ([conformance](../../docs/conformance.md#in-ci-on-2026-11-10)). Docker Desktop is still unchecked.*
 - [x] The margin keeps a correct backend from failing: no false failure in 10 runs of the suite on this Mac. To check in this step. *2026-11-09: at 10 ms, 288 checks passed in 10 runs out of 10. At 5 ms, the first run failed the Python backend twice ([conformance](../../docs/conformance.md#measured-on-2026-11-09)).*
-- [ ] The margin can shrink on native Linux, where timers are tighter. To check on the report's machine (plan step 6.2).
+- [ ] The margin can shrink on native Linux, where timers are tighter. To check on the report's machine (plan step 6.2). *2026-11-10, in CI, a cloud VM: the probe's p99 was 0.09 to 0.14 ms, and the streams' median lateness 1.1 to 2.6 ms, so T, at 10.1 ms, is mostly margin. A fake that drifts would likely pass there ([conformance](../../docs/conformance.md#in-ci-on-2026-11-10)).*
 - [x] A fake that sleeps one gap after each token fails the pace rule, on this Mac. To check in this step, with that fake planted on purpose. *2026-11-09: it fails on both Go servers, with a median lateness of 62.0 and 58.5 ms ([conformance](../../docs/conformance.md#measured-on-2026-11-09)).*
 - [x] Each check fails when it should. To check in this step, with mistakes planted on purpose. *2026-11-09: six planted mistakes, each caught ([conformance](../../docs/conformance.md#measured-on-2026-11-09)). Not every check was given a mistake of its own.*
 
