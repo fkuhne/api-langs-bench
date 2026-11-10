@@ -263,6 +263,7 @@ What these numbers are:
 - **For development.** Docker Desktop runs its containers in a VM, WSL 2, so its timing numbers don't reach the report ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)). This VM's timers woke within 0.2 ms at the median, though.
 - **Not compared with the Mac's check above** ([0008](../spec/decisions/0008-run-anywhere-with-docker-and-record-the-machine.md)).
 - **Under provisional limits and rates,** which plan steps 3.1 and 3.2 set.
+- **Made before the Python fake's clock was fixed.** Its tokens could then leave up to 2 ms before their time, so Python's latencies here are slightly flattering, by about 0.5 ms on average (computed). The Go fakes weren't affected ([0022](../spec/decisions/0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md)).
 
 ### Why every file says dirty
 
