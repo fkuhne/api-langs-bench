@@ -6,7 +6,7 @@ Instructions for coding agents working in this repository. Keep this file short:
 
 A benchmark of the same AI backend written in several programming languages: Python and Go first, then Rust, Java, JavaScript and C++. Every backend serves one chat API, taken from [ai-bootstrap](https://github.com/fkuhne/ai-bootstrap), whole and streamed. Behind it sits an LLM: llama.cpp locally, Ollama Cloud remotely, or fakes that isolate the backend's own cost. An evaluation tool sends every backend the same load, and records its latency, its stream's behaviour, its throughput and its resources.
 
-What the project covers is in [`spec/product.md`](spec/product.md). What we know about benchmarking an AI backend, with sources, is in [`docs/benchmarking.md`](docs/benchmarking.md).
+What the project covers is in [`spec/product.md`](spec/product.md). What we know about benchmarking an AI backend, with sources, is in [`docs/benchmarking.md`](docs/benchmarking.md). The notes' guide, with the project's words explained, is [`docs/README.md`](docs/README.md).
 
 ## Read before acting
 

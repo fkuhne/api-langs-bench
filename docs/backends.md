@@ -1,6 +1,10 @@
 # The backends
 
-Each backend serves [the contract](../contract/README.md) with its in-process fake. This page says how each is set up, with the documentation it follows (R6), and what was measured when it was built. These are a step's checks, not the benchmark's results; those come from the runner (plan step 1.6) onwards.
+Three backends serve [the contract](../contract/README.md) so far: Python on FastAPI, Go on its standard library's `net/http`, and Go on Gin. This page says:
+- **how each is set up,** and which documentation that set-up follows. Each must be written the way its ecosystem recommends for production, so none wins or loses by an unusual configuration (R6);
+- **what was measured when each was built:** its image's size, how fast it starts, what it uses when idle, and how well its fake keeps time.
+
+These are each step's checks, on a development Mac, with every backend answering from the fake inside it. They aren't the benchmark's results: those come from [the runner](runner.md). The words used here, such as pace and in-process fake, are explained in [the guide](README.md#the-words-used-here).
 
 **The machine for every number here:**
 - **Host:** an Apple M3 with 8 cores and 8 GB, on macOS 14.3.

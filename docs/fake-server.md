@@ -1,6 +1,10 @@
 # The fake upstream server
 
-The upstream that isolates a backend's own cost, its HTTP client included: a server shaped like llama.cpp's, which streams the contract's tokens at the contract's pace ([0004](../spec/decisions/0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)). How it's built, and why, is in [0023](../spec/decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md). It's plan step 2.1. It starts with:
+A backend's job is to call a language model and pass its answer on. To measure what that costs in each language, the model has to be taken out of the picture: a real one takes seconds to answer, and never the same way twice.
+
+The fake upstream server takes its place. It's a small program that answers the way llama.cpp's server does, with the contract's fixed tokens on the contract's timetable. A backend calls it over HTTP with the same client code it calls llama.cpp with. So a run against it measures that client too: opening and reusing connections, reading the stream, and turning each chunk into an event ([0004](../spec/decisions/0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)).
+
+How it's built, and why, is in [0023](../spec/decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md). It's plan step 2.1, and the backends' clients for it are plan step 2.2. The words used here are explained in [the guide](README.md#the-words-used-here). It starts with:
 
 ```text
 docker compose up -d --wait fake-server
@@ -117,6 +121,16 @@ go-nethttp: 42 events, lateness median 6.29 ms, min 4.51, max 10.06; the last qu
 
 - **The fake server keeps the pace as the Go backends' in-process fake does:** no token early, and no lateness that adds up.
 - **Its headers came at 114.8 ms,** with the first token, due at 100 ms. A backend's come at once.
+
+**In CI, on Linux's tighter timers,** the same day, in [run 42857893952](https://github.com/fkuhne/api-langs-bench/actions/runs/42857893952) on commit `7bf50e3`: 321 checks passed in 74.64 s.
+
+```text
+the machine's timers: 200 sleeps of 10 ms woke 0.11 ms late at the median, 0.12 ms at the p99; tolerance 10.12 ms (the p99 plus 10 ms)
+fake-server: 42 tokens, lateness median 1.35 ms, min 0.76, max 1.82; the last quarter -0.06 ms on the first; headers at 101.3 ms
+go-nethttp: 42 events, lateness median 1.43 ms, min 0.82, max 1.90; the last quarter -0.15 ms on the first; headers at 0.7 ms
+```
+
+There too, the fake server's tokens come as the Go backend's do: none early, 0.8 to 1.8 ms after their time, measured from when the request was sent.
 
 ## Measured alone, on 2026-11-10
 

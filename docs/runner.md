@@ -1,6 +1,8 @@
 # The runner
 
-One command sends a workload to each backend in turn, and saves each run once in [`runs/`](../runs/README.md):
+The runner is what makes the benchmark's numbers. For each backend in turn, it starts the backend alone, has a load generator send it the same request at a fixed rate for 30 s, and saves what was measured in one file in [`runs/`](../runs/README.md). At the end it prints a table. The words used here, such as run, pass and p99, are explained in [the guide](README.md#the-words-used-here).
+
+One command does it all:
 
 ```text
 docker compose run --rm runner
@@ -61,6 +63,26 @@ At the end, every backend is left running with the settings `.env` gives. Like t
 | `oha` | oha's whole output |
 
 **What the file doesn't hold yet:** the backend's memory and CPU use, and each event's time. The limits are provisional until plan step 3.1, and timing numbers from a Mac never reach the report ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
+
+## Reading a table of runs
+
+The runner's table has one row for each backend at each rate:
+
+| Column | What it says |
+|---|---|
+| Rate | How many requests a second the load generator started |
+| Runs | How many passes the row sums up |
+| p50, ms | The median latency: half of the requests ended sooner. With several passes, it's the median of the passes' p50s, and their range in brackets |
+| p99, ms | The latency 99 requests in 100 beat: the slow tail |
+| Requests | How many were sent, over all the passes |
+| Not 200 | How many of them failed, or got another status than 200 |
+| Kept the rate | In how many passes the load generator sent at least 99% of the requests that were due |
+
+How to read a row:
+- **Every stream of the `stream-20` workload is due to end at 240 ms,** by the fake's timetable. So a p50 of 241.0 ms says the backend added 1.0 ms at the median.
+- **A healthy row** has a p50 and a p99 just above 240 ms, nothing under "Not 200", and its rate kept in every pass.
+- **A row that didn't keep its rate** is a backend past its ceiling. Requests waited in the load generator, so the latencies run to seconds, and the percentiles leave out the requests that were never sent. Such a row says "it can't serve this rate", and its figures say little more.
+- **A wide range in brackets** says the passes disagreed: something disturbed one of them, on the machine or in the backend.
 
 ## The load generator, measured alone
 

@@ -1,6 +1,6 @@
 # The contract
 
-The one API every backend implements, and how both fakes behave. It's [ai-bootstrap](https://github.com/fkuhne/ai-bootstrap)'s stateless chat, cut to text ([0003](../spec/decisions/0003-every-backend-implements-ai-bootstraps-chat-api.md)). What was kept, and why, is in [0010](../spec/decisions/0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md).
+A backend takes a chat request, asks its upstream for the answer, and returns it: whole, or as a stream of pieces. The upstream is a language model's server, or a fake of one. This folder says exactly what that means, so that every backend does the same work and their numbers can be compared. It holds the one API every backend implements, and how both fakes behave. It's [ai-bootstrap](https://github.com/fkuhne/ai-bootstrap)'s stateless chat, cut to text ([0003](../spec/decisions/0003-every-backend-implements-ai-bootstraps-chat-api.md)). What was kept, and why, is in [0010](../spec/decisions/0010-the-contract-ai-bootstraps-chat-in-text-paced-fakes-and-openapi-3-2.md).
 
 A change here changes every backend and the conformance suite in the same commit, and bumps `info.version` in [`openapi.yaml`](openapi.yaml).
 

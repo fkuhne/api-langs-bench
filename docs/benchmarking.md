@@ -2,6 +2,8 @@
 
 What we know about benchmarking an AI backend written in several programming languages, each claim with its source: a paper's section or table, a vendor page, the code, documentation, or a run of ours, with the date it was checked. A number worked out but not yet run is marked "computed". A claim from memory is marked "unchecked". A claim read only in a search engine's summary, not on the page itself, says so.
 
+This page is the project's reading: what others measured before us, the traps in measuring latency, and what each tool we lean on does. What we built and measured ourselves is on the other pages, listed in [the guide](README.md), which also explains the words used here.
+
 ## Prior art
 
 ### General web benchmarks
@@ -78,7 +80,7 @@ As summarised by a search on 2026-11-05, from NVIDIA's documentation and the DEV
 
 ## Measuring latency without fooling ourselves
 
-- **Coordinated omission** is Gil Tene's name for how closed-loop tools under-report tail latency. While the system is slow, they stop sending, so the slow period is under-sampled.
+- **Coordinated omission** is Gil Tene's name for how closed-loop tools under-report tail latency. A closed-loop tool sends its next request only when the last one is answered. While the system is slow, it stops sending, so the slow period is under-sampled: a server that freezes for a second is asked almost nothing during that second, and the freeze barely shows.
 - **Open and closed models:** in [k6's closed model](https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/), the default, a virtual user's next iteration starts only when the last one ends. Its arrival-rate executors are open: requests arrive at a set rate, whatever the server does.
 - **wrk2** sends at a constant rate, and its latency includes the time queued.
 - **Vegeta** is open-loop.
