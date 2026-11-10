@@ -52,7 +52,8 @@ The first numbers are the `stream-20` workload at 100, 500, 1,000 and 2,000 requ
 - [x] Go sizes itself to a container's CPU limit. *2026-11-10: under `--cpus 1`, Go 1.27.3 sets `GOMAXPROCS` to 2, its minimum, against 4 without a limit (our run).*
 - [ ] Python's uvicorn, with one process, needs no setting to respect a 1-CPU limit. Unchecked: one process on one event loop can't use more than one CPU anyway.
 - [x] With connections at four times the streams open at once, no request waits for a connection while a backend keeps its pace. To check in this step. *2026-11-10: both Go servers kept every rate to 2,000 a second with a p50 within 2.2 ms of the due time, and no error ([runner](../../docs/runner.md#a-check-of-the-ladder-on-2026-11-10)).*
-- [ ] Three passes give a range small enough to tell the backends apart. To check with the first numbers.
+- [x] Three passes give a range small enough to tell the backends apart. To check with the first numbers. *2026-11-10: partly. Python's ranges never touch Go's: at 100 a second its p50 was 243.0 to 243.3 ms against 240.9 to 241.0 ms. The two Go servers' ranges overlap wherever one pass was disturbed, and one stretch of pass 1 was: at 2,000 a second `net/http`'s p99 ranged from 243.2 to 2,081.5 ms, across Gin's 298.6 to 412.9 ms. Three passes give a median that survives one disturbed run, not a range that does ([runner](../../docs/runner.md#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx)).*
+- [ ] The disturbed stretch of the first numbers' pass 1 came from the machine, not from `net/http`. Unchecked: a run doesn't record the backend's CPU or the machine's load yet (plan step 3.4).
 - [ ] 512 MiB binds no backend at these rates. Peaks were near 105 MiB in the quick ladder; to check with the first numbers, once memory is sampled (plan step 3.4).
 
 ## Learned while building it
@@ -60,8 +61,16 @@ The first numbers are the `stream-20` workload at 100, 500, 1,000 and 2,000 requ
 - **Under 1 CPU, Python ran out between 500 and 1,000 requests a second** on the Mac: at 1,000 it answered 695 a second. In the quick ladder, without a limit, it was near its ceiling at 1,500. One pass on a busy machine; the first numbers will say more ([runner](../../docs/runner.md#a-check-of-the-ladder-on-2026-11-10)).
 - **A run that fails needs reading with care:** its percentiles leave out requests never sent, and cover only what oha timed. The table's last three columns say when that happened.
 
+## Learned from the first numbers
+
+On 2026-11-10, on the owner's Core i7-12850HX with Docker Desktop on Windows ([runner](../../docs/runner.md#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx)):
+- **The 36 runs started within 24 min 31 s,** and take 197,511 bytes in git: as computed.
+- **The ladder's steps are too wide for Python there.** It kept 100 a second, and answered about 300 a second at 500 and at 1,000. Plan step 3.2's rates need points between 100 and 500.
+- **Every run says `"dirty": true`,** most likely from Windows line endings ([0018](0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md)).
+
 ## Sources
 
 - Our runs on 2026-11-09 and 2026-11-10 ([runner](../../docs/runner.md#what-the-ladder-rests-on)).
 - uvicorn 0.54.0's default `timeout_keep_alive`, 5, read from its `Config` on 2026-11-10; the Go backends' `http.Server` in [`app.go`](../../backends/go/internal/app/app.go), which sets no idle timeout.
+- The first numbers' 36 runs, 2026-11-10 ([runner](../../docs/runner.md#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx)).
 - The owner's picks, 2026-11-10.

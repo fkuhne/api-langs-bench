@@ -6,14 +6,14 @@ One command sends a workload to each backend in turn, and saves each run once in
 docker compose run --rm runner
 ```
 
-By default it runs every backend at four rates, three times over: 36 runs, in about 25 minutes (computed). Options may follow the command:
+By default it runs every backend at four rates, three times over: 36 runs, in about 25 minutes: the first numbers' runs started within 24 min 31 s ([below](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx)). Options may follow the command:
 - `--backend go-gin` runs one backend; it may be given more than once;
 - `--rate 100` runs one rate, in requests a second; it may be given more than once;
 - `--passes 1` runs everything once.
 
 Why it's built this way is in [0018](../spec/decisions/0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md) and [0020](../spec/decisions/0020-the-first-numbers-a-ladder-of-rates-under-provisional-limits-three-passes.md). This is the first runner, of plan steps 1.6 and 1.8: one workload, with latency and errors. The limits and the rates are provisional, and the other workloads and the resources arrive in Phase 3.
 
-To make the first numbers on a machine, see [The first numbers](#the-first-numbers).
+To make the first numbers on a machine, see [The first numbers](#the-first-numbers). The ones made so far are [below](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx).
 
 ## What a run is
 
@@ -194,3 +194,59 @@ Plan step 1.8's numbers are made on the machine the owner names, with one comman
 5. **Commit the new files in `runs/`,** and write the table into this page, under a heading with the date and the machine. On Linux the files belong to root, since the runner's container runs as root; git reads them all the same.
 
 Numbers from different machines are never compared ([0008](../spec/decisions/0008-run-anywhere-with-docker-and-record-the-machine.md)). Timing numbers from a machine that runs Docker in a VM, such as a Mac, are for development ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
+
+## The first numbers, on 2026-11-10, on a Core i7-12850HX
+
+Plan step 1.8's numbers: `docker compose run --rm runner`, the whole ladder, on the owner's second machine. The 36 runs are `runs/20261110T115536Z-python-fastapi-100rps.json` to `runs/20261110T122007Z-go-nethttp-2000rps.json`. The last started 24 min 31 s after the first. The files take 197,511 bytes, 5.4 to 5.6 kB each.
+
+**The machine and the settings,** as every run's file records them:
+- **The host,** from `BENCH_MACHINE`: "Intel Core i7-12850HX, 16 cores / 24 threads, 32 GiB RAM, Windows 11 Enterprise 25H2 (build 26200.9448), Docker Desktop (WSL 2)".
+- **Docker** 29.7.2, as Docker Desktop, on kernel 6.18.33.2-microsoft-standard-WSL2, x86-64, with 24 CPUs and 15.4 GiB. Compose 5.1.4, the runner's own.
+- **The timers** woke 0.10 to 0.17 ms late at the median before each run, and 0.22 to 0.77 ms at the p99.
+- **The limits:** 1 CPU and 536,870,912 bytes for every backend, read back from Docker.
+- **The workload:** `stream-20` as [above](#what-a-run-is), for 30 s after 5 s of warm-up, against the in-process fake.
+- **The code:** commit `0fe92be`, with `"dirty": true` in every file ([below](#why-every-file-says-dirty)).
+
+Each cell is the median over the three passes, with the range. The table is the runner's own, made again from the 36 files with `bench.runner.table`:
+
+| Backend | Rate | Runs | p50, ms | p99, ms | Requests | Not 200 | Kept the rate |
+|---|---|---|---|---|---|---|---|
+| `python-fastapi` | 100/s | 3 | 243.2 (243.0 to 243.3) | 246.6 (246.0 to 258.0) | 9000 | 0 | 3 of 3 |
+| `python-fastapi` | 500/s | 3 | 6922.2 (6003.9 to 8066.0) | 13181.9 (11936.4 to 14091.5) | 26860 | 0 | 0 of 3 |
+| `python-fastapi` | 1000/s | 3 | 12042.2 (11442.1 to 12356.1) | 25044.4 (23730.6 to 25306.7) | 25743 | 0 | 0 of 3 |
+| `python-fastapi` | 2000/s | 3 | 14781.7 (13295.0 to 16955.6) | 27798.1 (27169.7 to 27895.5) | 25246 | 3160 | 0 of 3 |
+| `go-nethttp` | 100/s | 3 | 240.9 (240.9 to 240.9) | 241.7 (241.7 to 241.8) | 9000 | 0 | 3 of 3 |
+| `go-nethttp` | 500/s | 3 | 240.8 (240.8 to 240.8) | 241.8 (241.7 to 241.8) | 45000 | 0 | 3 of 3 |
+| `go-nethttp` | 1000/s | 3 | 240.9 (240.8 to 839.5) | 241.9 (241.7 to 5811.6) | 89595 | 0 | 2 of 3 |
+| `go-nethttp` | 2000/s | 3 | 241.0 (241.0 to 241.6) | 244.1 (243.2 to 2081.5) | 179994 | 0 | 3 of 3 |
+| `go-gin` | 100/s | 3 | 241.0 (240.9 to 241.0) | 241.8 (241.8 to 241.8) | 9000 | 0 | 3 of 3 |
+| `go-gin` | 500/s | 3 | 240.8 (240.8 to 240.8) | 241.8 (241.7 to 276.1) | 45000 | 0 | 3 of 3 |
+| `go-gin` | 1000/s | 3 | 240.9 (240.9 to 241.0) | 242.0 (242.0 to 283.9) | 89999 | 0 | 3 of 3 |
+| `go-gin` | 2000/s | 3 | 241.3 (241.3 to 241.4) | 345.8 (298.6 to 412.9) | 179996 | 0 | 3 of 3 |
+
+What the runs show:
+- **Both Go servers kept their rate in 23 runs of 24,** with a p50 of 240.8 to 241.6 ms against the 240 ms due, and no error in any run.
+- **One stretch of pass 1 was disturbed.**
+  - `go-nethttp` at 1,000 a second, started at 11:59:54Z, sent 29,596 of the 30,000 requests due, with a p50 of 839.5 ms and a p99 of 5,811.6 ms.
+  - The next run, at 2,000 a second, kept its rate and its p50, 241.6 ms, but its p99 was 2,081.5 ms.
+  - In passes 2 and 3, the same two runs had a p99 of 244.1 ms at most.
+  - The timer probe before each read as in the other runs: 0.12 and 0.13 ms at the median.
+  - The cause is unknown: a run's file doesn't record the backend's CPU or the machine's load yet (plan step 3.4). The medians leave the stretch out, and the ranges show it.
+- **At 2,000 a second, Gin's p99 was 298.6 to 412.9 ms in all three passes,** against 243.2 and 244.1 ms for `net/http` in its two undisturbed passes. Below that rate nothing separates the two: the medians of their p50 and of their p99 are within 0.1 ms of each other.
+- **Python kept 100 a second only.** There its p50 was 243.2 ms, 2.2 to 2.3 ms above Go's. Its first byte came at 52.2 to 52.4 ms at the median, against 50.8 to 50.9 ms for Go, due at 50 ms.
+- **Above that, Python answered about 300 streams a second:** 281 to 317 at 500 a second, and 284 to 290 at 1,000. The rest waited in oha: at 500 a second the p50 was 6.0 to 8.1 s. At 2,000 a second, 981 to 1,135 requests in each run had no answer after 30 s. No run had a connection error. These runs' percentiles leave out the requests never sent ([reading a failed run](#a-check-of-the-ladder-on-2026-11-10)).
+- **The ladder's steps are too wide for Python on this machine:** it runs out somewhere between 100 and 500 a second. Plan step 3.2's rates need points in between.
+
+What these numbers are:
+- **For development.** Docker Desktop runs its containers in a VM, WSL 2, so its timing numbers don't reach the report ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)). This VM's timers woke within 0.2 ms at the median, though.
+- **Not compared with the Mac's check above** ([0008](../spec/decisions/0008-run-anywhere-with-docker-and-record-the-machine.md)).
+- **Under provisional limits and rates,** which plan steps 3.1 and 3.2 set.
+
+### Why every file says dirty
+
+Every one of the 36 files has `"dirty": true`, which says a tracked file differed from commit `0fe92be`. The likely cause, reproduced on the Mac on 2026-11-10 but not confirmed on that machine:
+- **Git for Windows checks text files out with CRLF line endings,** from a `core.autocrlf` it sets outside the repository.
+- **The runner reads the repository from inside a container,** where that setting can't be seen. So each file's CRLF content looks like a change.
+- **A clone made that way read as dirty,** in 180 of its 183 tracked files, at commit `a3fd6e4`. The same clone with the setting in its own config, and a clone with LF endings, read as clean.
+
+To confirm on that machine: `git status` says the tree is clean, and `git config --show-origin core.autocrlf` names a file outside the repository. A fix, such as a `.gitattributes` that keeps LF endings everywhere, is a decision still to make ([0018](../spec/decisions/0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md)).
