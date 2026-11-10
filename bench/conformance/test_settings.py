@@ -10,6 +10,9 @@ INVALID = {
     "a count below its minimum": {"FAKE_ANSWER_TOKENS": "0"},
     "a time that isn't a number": {"FAKE_TOKEN_GAP_MS": "soon"},
     "an unknown upstream": {"LLM_PROVIDER": "psychic"},
+    "an upstream's address without a scheme": {"LLM_BASE_URL": "fake-server:8080"},
+    "no time to wait for the upstream": {"LLM_TIMEOUT_SECONDS": "0"},
+    "no connection to the upstream": {"LLM_MAX_CONNECTIONS": "0"},
 }
 
 
@@ -19,7 +22,7 @@ def test_an_invalid_setting_stops_the_start_up(
 ) -> None:
     backend.forget()
 
-    started = compose.up(backend.service, FakeSettings().environment() | setting)
+    started = compose.up(backend.service, backend.environment(FakeSettings()) | setting)
 
     state = compose.state(backend.service)
     assert not started, f"it started with {setting}"

@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx2
 
-from bench.backends import url
+from bench.backends import FAKE_SERVER, IN_PROCESS, MODELS, upstream_settings, url
 from bench.compose import Compose
 from bench.contract import Contract
 from bench.fake import Answer, FakeSettings, answer
@@ -39,15 +39,18 @@ type Body = str | dict[str, Any]
 
 @dataclass(frozen=True)
 class Served:
-    """A backend's client, and the settings its fake runs with."""
+    """A backend's client, the settings its fake runs with, and the model its answers name."""
 
     client: httpx2.Client
     settings: FakeSettings
+    model: str
 
     def expect(self, body: Body, tokens: tuple[str, ...]) -> Answer:
         """What the contract says this backend answers `body`."""
         request = json.loads(body) if isinstance(body, str) else body
-        return answer(self.settings, tokens, request["messages"], request.get("parameters", {}))
+        return answer(
+            self.settings, tokens, request["messages"], request.get("parameters", {}), self.model
+        )
 
 
 @dataclass(frozen=True)
@@ -62,20 +65,36 @@ class Streamed:
 
 
 class Backend:
-    """One backend's service, restarted only when a check needs other settings."""
+    """One backend's service, answering from one upstream: the fake inside it, or the fake
+    server. It's restarted only when a check needs other settings."""
 
-    def __init__(self, service: str, compose: Compose) -> None:
+    def __init__(self, service: str, compose: Compose, upstream: str = IN_PROCESS) -> None:
         self.service = service
+        self.upstream = upstream
         self._compose = compose
         self._serving: Served | None = None
 
+    @property
+    def name(self) -> str:
+        """The backend and its upstream, for a report's line."""
+        if self.upstream == IN_PROCESS:
+            return self.service
+        return f"{self.service} via {self.upstream}"
+
+    def environment(self, settings: FakeSettings) -> dict[str, str]:
+        """The backend's settings: the fake's, and its upstream's."""
+        return settings.environment() | upstream_settings(self.upstream)
+
     def serve(self, settings: FakeSettings) -> Served:
-        """The backend, running with `settings`."""
+        """The backend, running with `settings`. Behind the fake server, that runs with them
+        too."""
         if self._serving is None or self._serving.settings != settings:
             self.forget()
-            self._compose.start(self.service, settings.environment())
+            if self.upstream == FAKE_SERVER:
+                self._compose.start(FAKE_SERVER, settings.environment())
+            self._compose.start(self.service, self.environment(settings))
             client = httpx2.Client(base_url=url(self.service), timeout=10)
-            self._serving = Served(client, settings)
+            self._serving = Served(client, settings, MODELS[self.upstream])
         return self._serving
 
     def forget(self) -> None:

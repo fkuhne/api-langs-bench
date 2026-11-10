@@ -15,6 +15,9 @@ from dataclasses import dataclass
 # What a backend may add over the machine's own timer error, at the median. Fixed from step
 # 1.5's runs (spec/decisions/0017).
 MARGIN_MS = 10.0
+# What the margin gains for a backend behind an upstream: its event crosses one more late
+# wake-up, the backend's read of the upstream's chunk (spec/decisions/0024).
+UPSTREAM_MARGIN_MS = 5.0
 
 # The probe: this many sleeps, each to a deadline this long after the last one's.
 PROBE_SLEEPS = 200
@@ -33,6 +36,10 @@ class Tolerance:
     def ms(self) -> float:
         """The tolerance: the probe's p99, plus the margin."""
         return self.p99_ms + self.margin_ms
+
+    def behind_upstream(self) -> Tolerance:
+        """The tolerance for a backend that passes an upstream's answer on."""
+        return Tolerance(self.median_ms, self.p99_ms, self.margin_ms + UPSTREAM_MARGIN_MS)
 
     @classmethod
     def of(cls, lateness_ms: Sequence[float], margin_ms: float = MARGIN_MS) -> Tolerance:
