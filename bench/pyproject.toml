@@ -3,8 +3,10 @@ name = "bench"
 version = "0.1.0"
 description = "The evaluation tool: the conformance suite, the runner and the analysis (spec/decisions/0012)."
 requires-python = ">=3.14,<3.15"
-# Reading the contract. The conformance suite (step 1.5) and the runner (step 1.6) add theirs.
+# Reading the contract, and the conformance suite's client, as the Python backend's tests use
+# (spec/decisions/0017). The runner (step 1.6) adds its own.
 dependencies = [
+    "httpx2==2.13.1",
     "jsonschema==4.26.0",
     "pyyaml==6.0.3",
     "referencing==0.37.0",
@@ -80,7 +82,10 @@ ban-relative-imports = "all"
     "S101",  # pytest uses assert
     "ARG",   # test doubles implement interfaces whose arguments they don't need
 ]
+"conformance/**" = [
+    "S101",  # pytest uses assert
+]
 
 [tool.mypy]
 strict = true
-files = ["bench", "tests"]
+files = ["bench", "tests", "conformance"]

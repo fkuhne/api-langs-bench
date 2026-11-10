@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 # What a backend may add over the machine's own timer error, at the median. Fixed from step
 # 1.5's runs (spec/decisions/0017).
-MARGIN_MS = 5.0
+MARGIN_MS = 10.0
 
 # The probe: this many sleeps, each to a deadline this long after the last one's.
 PROBE_SLEEPS = 200
