@@ -66,7 +66,7 @@ The first numbers are the `stream-20` workload at 100, 500, 1,000 and 2,000 requ
 On 2026-11-10, on the owner's Core i7-12850HX with Docker Desktop on Windows ([runner](../../docs/runner.md#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx)):
 - **The 36 runs started within 24 min 31 s,** and take 197,511 bytes in git: as computed.
 - **The ladder's steps are too wide for Python there.** It kept 100 a second, and answered about 300 a second at 500 and at 1,000. Plan step 3.2's rates need points between 100 and 500.
-- **Every run says `"dirty": true`,** most likely from Windows line endings ([0018](0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md)).
+- **Every run says `"dirty": true`,** from Windows line endings ([0018](0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md)).
 
 ## Sources
 
