@@ -93,6 +93,33 @@ services:
       timeout: 5s
       retries: 3
 
+  # The fake upstream server, shaped like llama.cpp's (spec/decisions/0023):
+  # docker compose up -d --wait fake-server. A helper, so it has no limits.
+  fake-server:
+    build:
+      context: fake-server
+      target: runtime
+      additional_contexts:
+        contract: contract
+    environment:
+      FAKE_ANSWER_TOKENS: ${FAKE_ANSWER_TOKENS:-256}
+      FAKE_REASONING_TOKENS: ${FAKE_REASONING_TOKENS:-0}
+      FAKE_FIRST_TOKEN_MS: ${FAKE_FIRST_TOKEN_MS:-0}
+      FAKE_TOKEN_GAP_MS: ${FAKE_TOKEN_GAP_MS:-0}
+    ports:
+      - 127.0.0.1:${FAKE_SERVER_PORT:-8010}:8080
+    # The image has no shell, so the server asks itself.
+    healthcheck:
+      test:
+        - CMD
+        - /app/server
+        - healthcheck
+      start_period: 30s
+      start_interval: 1s
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The contract's lint: docker compose run --rm contract-checks
   contract-checks:
     image: redocly/cli:2.69.0
@@ -140,6 +167,32 @@ services:
       - ./contract:/contract:ro
       # Go's build cache and golangci-lint's, kept between runs: without them, every run
       # compiles Gin and its dependencies again, with the race detector.
+      - go-build-cache:/tmp/go-build
+      - golangci-lint-cache:/tmp/golangci-lint
+    environment:
+      GOCACHE: /tmp/go-build
+      GOLANGCI_LINT_CACHE: /tmp/golangci-lint
+    command:
+      - sh
+      - -c
+      - >-
+        golangci-lint run
+        && go test -race -shuffle=on -covermode=atomic -coverpkg=./... -coverprofile=/tmp/cover.out ./...
+        && go tool cover -func=/tmp/cover.out
+        | awk '/^total:/ { sub("%", "", $$3); print "coverage: " $$3 "%";
+        if ($$3 + 0 < 90) { print "below 90%"; exit 1 } }'
+
+  # The fake server's gates, the same as the Go backends': docker compose run --rm fake-server-checks
+  fake-server-checks:
+    build:
+      context: fake-server
+      target: dev
+      additional_contexts:
+        contract: contract
+    profiles: [tools]
+    volumes:
+      - ./fake-server:/src:ro
+      - ./contract:/contract:ro
       - go-build-cache:/tmp/go-build
       - golangci-lint-cache:/tmp/golangci-lint
     environment:
