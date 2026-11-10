@@ -1,6 +1,6 @@
 # 0025. llama.cpp in Compose: Qwen3.5-0.8B, four slots, and a model file pinned by its commit
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-10
 
 ## Context
@@ -66,11 +66,15 @@ Compose gets a `llama-cpp` service: llama.cpp's server at build `b12242`, pinned
 
 ## Assumptions to verify
 
-- [ ] Each backend answers through llama.cpp, whole and streamed, with reasoning events. To check in this step.
-- [ ] llama.cpp's refusals map to the contract's errors as [0024](0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md) says: a 400 becomes 502. To check in this step.
-- [ ] Compose starts a service that sits in a profile when it's named, in both the Compose outside, 5.5.1, and the one inside the suite's image, 5.1.4. To check in this step.
-- [ ] The pinned file is downloaded once, and loaded from the volume afterwards, without the network. To check in this step.
+- [x] Each backend answers through llama.cpp, whole and streamed, with reasoning events. To check in this step. *2026-11-10: 21 checks passed, 7 for each backend ([llama.cpp](../../docs/llama-cpp.md)).*
+- [x] llama.cpp's refusals map to the contract's errors as [0024](0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md) says: a 400 becomes 502. To check in this step. *2026-11-10: `"temperature": "hot"` got llama.cpp's 400, and a 502 from every backend, whole and streamed; with llama.cpp stopped, a 503 ([llama.cpp](../../docs/llama-cpp.md)).*
+- [x] Compose starts a service that sits in a profile when it's named, in both the Compose outside, 5.5.1, and the one inside the suite's image, 5.1.4. To check in this step. *2026-11-10: both started it by name; `docker compose config --services` doesn't list it otherwise (our runs).*
+- [x] The pinned file is downloaded once, and loaded from the volume afterwards, without the network. To check in this step. *2026-11-10: healthy 78 s after the first start, download included; 4.9 s after a later one; and loaded with no network at all ([llama.cpp](../../docs/llama-cpp.md)).*
 - [ ] 4 slots and 8,192 tokens fit the machine that makes the report's runs. Unchecked; plan step 6.2.
+
+## Learned while building it
+
+- **The suite's checks through it need llama.cpp started first.** Its first start downloads the model, which takes longer than the suite waits for a service, 60 s. Once the model is in its volume, the checks restart it themselves.
 
 ## Sources
 
@@ -78,4 +82,5 @@ Compose gets a `llama-cpp` service: llama.cpp's server at build `b12242`, pinned
 - Hugging Face's API for each repository's files, sizes, licence and commit, 2026-11-10.
 - `llama-server --help` in the pinned image, and [its README](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md), read on 2026-11-10.
 - ai-bootstrap's [`compose.yaml`](https://github.com/fkuhne/ai-bootstrap/blob/main/compose.yaml), [`compose/llm-cpu.yaml`](https://github.com/fkuhne/ai-bootstrap/blob/main/compose/llm-cpu.yaml) and [`docs/models.md`](https://github.com/fkuhne/ai-bootstrap/blob/main/docs/models.md), read on 2026-11-10.
+- [llama.cpp's notes](../../docs/llama-cpp.md), with every run of this step.
 - The owner's picks, 2026-11-10.

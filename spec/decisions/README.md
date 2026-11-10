@@ -45,4 +45,4 @@ Don't rewrite a record to change its decision. Write a new record and mark the o
 | [0022](0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md) | The Python fake keeps time on the system's monotonic clock, not uvloop's | Accepted | 2026-11-10 |
 | [0023](0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md) | The fake upstream server: Go, in its own module, shaped as llama.cpp's chunks, field for field | Accepted | 2026-11-10 |
 | [0024](0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md) | Each backend's upstream client: its plain HTTP client, one pool setting, no retries | Accepted | 2026-11-10 |
-| [0025](0025-llama-cpp-in-compose-qwen3-5-0-8b-four-slots-a-pinned-file.md) | llama.cpp in Compose: Qwen3.5-0.8B, four slots, and a model file pinned by its commit | Proposed | 2026-11-10 |
+| [0025](0025-llama-cpp-in-compose-qwen3-5-0-8b-four-slots-a-pinned-file.md) | llama.cpp in Compose: Qwen3.5-0.8B, four slots, and a model file pinned by its commit | Accepted | 2026-11-10 |

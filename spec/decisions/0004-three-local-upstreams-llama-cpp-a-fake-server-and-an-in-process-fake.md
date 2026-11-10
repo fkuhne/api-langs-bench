@@ -40,7 +40,7 @@ Two rules keep them fair:
 
 - [ ] The fake server reaches a rate well above every backend's ceiling on the same machine. *2026-11-10, alone, on the Mac: it kept 12,000 paced streams a second on 2.2 CPUs, three times what the Go backend kept under 1 CPU from its in-process fake. But the VM's 4 CPUs leave little room above 6,000 once the load generator holds four connections for each open stream ([fake server](../../docs/fake-server.md#measured-alone-on-2026-11-10)). Each backend's ceiling against it is plan step 2.4's.*
 - [ ] Each language's timers keep the fakes' pace accurately at the gaps we use. *2026-11-06: Python keeps the average pace (a median gap of 19.5 ms against 20). But in Colima's VM on the owner's M3, every wait wakes 7 to 11 ms late, Python's or not: a bare `time.sleep(0.02)` wakes 6.8 ms late at the median ([backends](../../docs/backends.md#timers-in-dockers-vm-on-this-mac)). That's the machine's error, not a language's.*
-- [ ] llama.cpp's stream can be imitated closely enough that a backend's code can't tell the fake server from it.
+- [ ] llama.cpp's stream can be imitated closely enough that a backend's code can't tell the fake server from it. *2026-11-10: the same client code passes the conformance suite through both ([conformance](../../docs/conformance.md), [llama.cpp](../../docs/llama-cpp.md#checked-by-the-conformance-suite)), and the fake server's chunks have llama.cpp's fields in its order ([fake server](../../docs/fake-server.md#how-its-built)). Whether a backend's speed differs between them is plan step 2.4's.*
 
 ## Sources
 
