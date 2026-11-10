@@ -1,0 +1,2 @@
+# Every text file keeps LF line endings in a checkout, on every system (spec/decisions/0021).
+* text=auto eol=lf

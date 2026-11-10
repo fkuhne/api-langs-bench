@@ -71,7 +71,8 @@ Every command is a Docker command, the same in PowerShell, cmd and POSIX shells.
 - **Runs anywhere with Docker** ([0008](spec/decisions/0008-run-anywhere-with-docker-and-record-the-machine.md)):
   - commands are Docker commands, the same in PowerShell, cmd and POSIX shells;
   - settings come from environment variables with working defaults, each in `.env.example`;
-  - ports are published on `127.0.0.1` only.
+  - ports are published on `127.0.0.1` only;
+  - text files keep LF line endings in every checkout ([0021](spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md)).
 - **Public** ([0009](spec/decisions/0009-publish-as-a-public-github-repository.md)):
   - keys stay in `.env`, never in git;
   - links to the owner's other projects point to their public repositories, never to a local folder.
