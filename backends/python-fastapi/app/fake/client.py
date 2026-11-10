@@ -9,7 +9,7 @@ from typing import TypeIs
 from pydantic import JsonValue
 
 from app.errors import SERVICE_ERRORS, ServiceError
-from app.fake.clock import Clock, LoopClock
+from app.fake.clock import Clock, MonotonicClock
 from app.llm.port import (
     ChatMessage,
     Completion,
@@ -54,7 +54,7 @@ class FakeLLMClient:
     ) -> None:
         self._settings = settings
         self._tokens = tuple(tokens)
-        self._clock = clock or LoopClock()
+        self._clock = clock or MonotonicClock()
 
     async def complete(self, messages: Sequence[ChatMessage], parameters: Parameters) -> Completion:
         """The whole answer, at the last token's time."""

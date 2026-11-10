@@ -15,6 +15,7 @@ Each backend serves [the contract](../contract/README.md) with its in-process fa
 - **Versions:** FastAPI 0.143.0 on Starlette 1.10.0 and Pydantic 2.14.3, served by uvicorn 0.54.0 with its `standard` extras, on Python 3.14.8.
 - **Why `uvicorn[standard]`:** it's what [FastAPI's deployment page](https://fastapi.tiangolo.com/deployment/manually/) recommends. The running server has uvloop 0.23.0's event loop and httptools 0.9.0's parsers loaded (in `/proc/1/maps`).
 - **One process,** with uvicorn's defaults, its access log included, until plan step 3.1's rule.
+- **The fake's clock** is `time.monotonic()`, not the event loop's: uvloop's `loop.time()` counts whole milliseconds, and read 0.7 to 2.0 ms behind it (our run in the backend's image, 2026-11-10). The fake waits again when the loop wakes before a token's time ([0022](../spec/decisions/0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md)).
 - **The stream** goes through FastAPI's own `EventSourceResponse`.
 - **Started with** `docker compose up -d --wait python-fastapi`, on `127.0.0.1:8001`.
 

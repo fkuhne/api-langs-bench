@@ -42,3 +42,4 @@ Don't rewrite a record to change its decision. Write a new record and mark the o
 | [0019](0019-ci-on-github-actions-five-jobs-on-x86-64-with-the-runners-own-docker.md) | CI on GitHub Actions: five jobs on x86-64, with the runner's own Docker | Accepted | 2026-11-09 |
 | [0020](0020-the-first-numbers-a-ladder-of-rates-under-provisional-limits-three-passes.md) | The first numbers: a ladder of rates under provisional limits, in three passes | Accepted | 2026-11-10 |
 | [0021](0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md) | Keep LF line endings on every system, with a `.gitattributes` | Accepted | 2026-11-10 |
+| [0022](0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md) | The Python fake keeps time on the system's monotonic clock, not uvloop's | Accepted | 2026-11-10 |
