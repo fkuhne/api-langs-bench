@@ -68,6 +68,10 @@ On the same machine, after plan step 1.4 added the two Go backends and Gin's dep
 
 On the same Mac, with the checks image built and the caches warm: `fake-server-checks` took 3.8 and 3.5 s, timed from the host, with 0 issues and 97.7% coverage. Its checks image shows as 1.36 GB in `docker image ls`, and the server's own as 22.3 MB.
 
+## With the upstream clients, on 2026-11-10
+
+On the same Mac, after plan step 2.2: the Python backend's gates ran 153 tests with 100% coverage, the Go backends' gates reported 0 issues and 93.8% coverage, and the evaluation tool's ran 158 tests with 100% coverage. httpx2 2.13.1 became one of the Python backend's own dependencies: it was a test dependency before.
+
 ## In CI
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs each gate, and the [conformance suite](conformance.md), on every push and pull request, in GitHub Actions ([0019](../spec/decisions/0019-ci-on-github-actions-five-jobs-on-x86-64-with-the-runners-own-docker.md)). Each of its jobs, five at first, and six since the fake server's gates joined on 2026-11-10, runs one of the commands above, on its own runner, with no cache and no secret.

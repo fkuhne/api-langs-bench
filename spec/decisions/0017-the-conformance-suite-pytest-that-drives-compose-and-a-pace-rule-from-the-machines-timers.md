@@ -81,6 +81,8 @@ The conformance suite is a pytest suite in `bench/conformance/`, run with `docke
 - [x] A fake that sleeps one gap after each token fails the pace rule, on this Mac. To check in this step, with that fake planted on purpose. *2026-11-09: it fails on both Go servers, with a median lateness of 62.0 and 58.5 ms ([conformance](../../docs/conformance.md#measured-on-2026-11-09)).*
 - [x] Each check fails when it should. To check in this step, with mistakes planted on purpose. *2026-11-09: six planted mistakes, each caught ([conformance](../../docs/conformance.md#measured-on-2026-11-09)). Not every check was given a mistake of its own.*
 
+*Amended on 2026-11-10 by [0024](0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md): behind the fake server, the tolerance is 5 ms wider.*
+
 ## Sources
 
 - [Schemathesis 4.11.0's release](https://newreleases.io/project/pypi/schemathesis/release/4.11.0) and [its guide to server-sent events](https://schemathesis.readthedocs.io/en/stable/guides/server-sent-events/), read on 2026-11-09.
