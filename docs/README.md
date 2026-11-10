@@ -22,6 +22,7 @@ This project builds that backend in several programming languages, sends each th
 | How we know every backend does the same work | [The conformance suite](conformance.md) |
 | How a measurement is made, and the numbers so far | [The runner](runner.md) |
 | What stands in for the model when a backend calls out over HTTP | [The fake upstream server](fake-server.md) |
+| How to put a real model behind a backend | [llama.cpp](llama-cpp.md) |
 | What keeps the code honest: lint, types, tests and coverage, locally and in CI | [The gates](gates.md) |
 | What others have measured, how latency is measured without fooling yourself, and what we read about each tool | [Benchmarking an AI backend: notes](benchmarking.md) |
 | What the project covers, and what it leaves out | [The product spec](../spec/product.md) |
