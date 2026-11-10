@@ -104,3 +104,19 @@ On GitHub's `ubuntu-24.04` runner: x86-64, 4 CPUs, 16 GB, Docker 28.0.4 and Comp
 
 - **Linux's timers in a cloud VM are 20 times tighter than Docker's VM on the Mac:** 0.1 ms late against about 2 ms. The streams came 1 to 3 ms late, against 4 to 8 ms on the Mac.
 - **So the 10 ms margin is loose there.** T was 10.1 ms, and every backend's median lateness was below 2.6 ms. A fake that sleeps one gap after each token would drift by its own overhead on each token, about 0.1 ms here (computed), or 3 ms over a stream. That passes a T of 10 ms. Whether the margin should shrink on Linux stays open in [0017](../spec/decisions/0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md).
+
+## Python's fake sent tokens early, on 2026-11-10
+
+The same runner, later that day: both attempts of [run 42830465967](https://github.com/fkuhne/api-langs-bench/actions/runs/42830465967), on a commit that changed no backend, failed one check of 288, `test_the_stream_keeps_the_pace[python-fastapi]`.
+
+| | Attempt 1 | Attempt 2 | Four earlier runs that passed |
+|---|---|---|---|
+| The timer probe, median / p99 | 0.07 / 0.08 ms late | not read | 0.08 to 0.11 ms at the median |
+| Python's stream, median lateness | 0.68 ms | 0.82 ms | 1.14 to 2.58 ms |
+| Python's stream, smallest lateness | -0.18 ms | -0.16 ms | 0.15 to 1.96 ms |
+| Events early, of 42 | 3, by 0.10 to 0.18 ms | at least 1 | none |
+| `net/http`'s smallest lateness | 0.64 ms | not read | not read |
+
+- **The pace rule caught a real fault,** not a flaky check: Python's fake counted its deadlines on uvloop's clock, which counts whole milliseconds and runs up to 2 ms behind the system's. A faster machine, with less time between the client and the backend, let it show.
+- **The Mac never showed it:** its late timers cover a millisecond many times over.
+- **The fix** is in [0022](../spec/decisions/0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md): the fake reads the system's monotonic clock, and waits again when the event loop wakes early.

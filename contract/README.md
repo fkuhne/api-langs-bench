@@ -144,6 +144,7 @@ Counting the reasoning and the answer together, token *i* (from 0) is due at:
 
 - **The start** is when the in-process fake is called, once the body is valid. For the fake server, it's when its request has arrived.
 - **The fake waits until each token's time,** rather than sleeping a gap after each token, so delays don't add up. A token whose time has passed goes at once.
+- **No token goes before its time,** by the system's monotonic clock. A runtime's own clock may be coarser: uvloop's counts whole milliseconds ([0022](../spec/decisions/0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md)).
 - **The whole answer** comes at the last token's time.
 
 How close to its time each token must be is set by the conformance suite's [pace rule](../docs/conformance.md#the-pace-rule).
