@@ -70,3 +70,8 @@ def test_each_upstream_has_its_settings_and_its_models_name() -> None:
         "LLM_TIMEOUT_SECONDS": "1",
     }
     assert [MODELS[upstream] for upstream in UPSTREAMS] == ["fake", "fake-server"]
+    assert upstream_settings("llama-cpp") == {
+        "LLM_PROVIDER": "openai-compatible",
+        "LLM_BASE_URL": "http://llama-cpp:8080/v1",
+        "LLM_TIMEOUT_SECONDS": "60",
+    }
