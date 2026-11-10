@@ -101,6 +101,7 @@ From [its README](https://github.com/ggml-org/llama.cpp/blob/master/tools/server
 - **Continuous batching** is on by default.
 - **Answers carry `timings`,** such as `predicted_per_second`.
 - **Images:** `ghcr.io/ggml-org/llama.cpp:server`, and `:server-cuda` for NVIDIA.
+- **Its stream is one event for each token,** each about 250 bytes, between a chunk with the role and chunks with the finish reason and the usage; its headers leave with the first token. Captured from the server itself on 2026-11-10 ([fake server](fake-server.md#what-llamacpp-sends)).
 
 ### Ollama Cloud
 
@@ -164,7 +165,6 @@ What we keep of it is in [`contract/`](../contract/README.md), and why is in [00
 
 Questions the sources don't answer yet. Each moves into the notes, with its source, once answered.
 
-- How does llama.cpp's server chunk its stream: one token per event, and with which fields? The fake server must imitate it (plan step 2.1).
 - What are Ollama Cloud's real limits on the free plan (plan step 4.2)?
 - Is Bifrost's benchmark harness published anywhere? If so, we could run its method.
 - Does a Python backend need several worker processes to compete fairly, and how does that fit a CPU limit (plan step 3.1)?
