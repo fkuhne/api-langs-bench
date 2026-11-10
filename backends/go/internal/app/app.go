@@ -16,6 +16,7 @@ import (
 	"github.com/fkuhne/api-langs-bench/backends/go/internal/fake"
 	"github.com/fkuhne/api-langs-bench/backends/go/internal/llm"
 	"github.com/fkuhne/api-langs-bench/backends/go/internal/settings"
+	"github.com/fkuhne/api-langs-bench/backends/go/internal/upstream"
 )
 
 // Address is where every backend listens in its container (spec/decisions/0011).
@@ -102,8 +103,12 @@ func Run(ctx context.Context, listener net.Listener, config Config) error {
 	return nil
 }
 
-// newLLMClient makes the client LLM_PROVIDER names. Only the fake, until plan step 2.2.
+// newLLMClient makes the client LLM_PROVIDER names: the upstream client, or the in-process
+// fake.
 func newLLMClient(s settings.Settings, tokensFile string) (llm.Client, error) {
+	if s.LLMProvider == settings.ProviderOpenAICompatible {
+		return upstream.New(s), nil
+	}
 	tokens, err := fake.LoadTokens(tokensFile)
 	if err != nil {
 		return nil, err

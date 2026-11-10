@@ -103,3 +103,10 @@ def test_repeated_single_events_skip_the_drift() -> None:
 
 def test_fewer_than_four_events_have_no_drift() -> None:
     assert Pace((1.0, 9.0, 1.0)).drift_ms is None
+
+
+def test_behind_an_upstream_the_margin_is_wider() -> None:
+    behind = TOLERANCE.behind_upstream()
+
+    assert (behind.median_ms, behind.p99_ms, behind.margin_ms) == (1.0, 2.0, 8.0)
+    assert behind.ms == TOLERANCE.ms + 5.0

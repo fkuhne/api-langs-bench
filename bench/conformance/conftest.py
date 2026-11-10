@@ -10,7 +10,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from bench.backends import BACKENDS
+from bench.backends import BACKENDS, FAKE_SERVER, IN_PROCESS, UPSTREAMS
 from bench.compose import Compose
 from bench.contract import Contract
 from bench.fake import FakeSettings
@@ -40,13 +40,25 @@ def compose() -> Compose:
     return Compose()
 
 
-@pytest.fixture(scope="session", params=BACKENDS)
+# Every backend, answering from each upstream: the fake inside it, then the fake server.
+SERVED = [(service, upstream) for service in BACKENDS for upstream in UPSTREAMS]
+
+
+def served_id(served: tuple[str, str]) -> str:
+    service, upstream = served
+    return service if upstream == IN_PROCESS else f"{service}-via-{upstream}"
+
+
+@pytest.fixture(scope="session", params=SERVED, ids=served_id)
 def backend(request: pytest.FixtureRequest, compose: Compose) -> Iterator[Backend]:
-    backend = Backend(request.param, compose)
+    service, upstream = request.param
+    backend = Backend(service, compose, upstream)
     yield backend
     backend.forget()
     # Left running with the settings `.env` gives, as Compose started it.
     compose.start(backend.service, {})
+    if upstream == FAKE_SERVER:
+        compose.start(FAKE_SERVER, {})
 
 
 @pytest.fixture
@@ -74,6 +86,13 @@ def tolerance(pytestconfig: pytest.Config) -> Tolerance:
 
 
 @pytest.fixture
+def allowed(tolerance: Tolerance, backend: Backend) -> Tolerance:
+    """The pace's tolerance for this backend: wider behind the fake server, where each event
+    crosses one more late wake-up (spec/decisions/0024)."""
+    return tolerance if backend.upstream == IN_PROCESS else tolerance.behind_upstream()
+
+
+@pytest.fixture
 def report(pytestconfig: pytest.Config) -> list[str]:
     """Lines printed at the end of the run."""
     return pytestconfig.stash[REPORT]
@@ -85,14 +104,15 @@ def pytest_configure(config: pytest.Config) -> None:
 
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Backend by backend; for each, the checks at the defaults, then paced, then the rest."""
+    """Backend by backend, and upstream by upstream; for each, the checks at the defaults, then
+    paced, then the rest. The checks of no backend come first."""
 
     def order(item: pytest.Item) -> tuple[int, int]:
         callspec = getattr(item, "callspec", None)
-        service = callspec.params.get("backend") if callspec else None
+        served = callspec.params.get("backend") if callspec else None
         names = getattr(item, "fixturenames", ())
         settings = 0 if "defaults" in names else 1 if "paced" in names else 2
-        return (BACKENDS.index(service) if service in BACKENDS else -1, settings)
+        return (SERVED.index(served) if served in SERVED else -1, settings)
 
     items.sort(key=order)
 

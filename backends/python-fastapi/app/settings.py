@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,8 +12,17 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(frozen=True)
 
-    # `openai-compatible` arrives with the upstream's client, in plan step 2.2.
-    llm_provider: Literal["fake"] = "fake"
+    # `fake` answers from the in-process fake; `openai-compatible` calls the upstream.
+    llm_provider: Literal["fake", "openai-compatible"] = "fake"
+
+    # The upstream (contract/README.md#the-upstream).
+    llm_base_url: HttpUrl = HttpUrl("http://fake-server:8080/v1")
+    llm_model: str = Field(default="local", min_length=1)
+    llm_api_key: SecretStr = Field(default=SecretStr("local"), min_length=1)
+    llm_timeout_seconds: float = Field(default=300, gt=0, allow_inf_nan=False)
+    llm_max_connections: int = Field(default=1000, ge=1)
+
+    # The in-process fake (contract/README.md#the-fakes).
     fake_answer_tokens: int = Field(default=256, ge=1)
     fake_reasoning_tokens: int = Field(default=0, ge=0)
     fake_first_token_ms: int = Field(default=0, ge=0)

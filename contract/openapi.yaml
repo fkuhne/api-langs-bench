@@ -1,7 +1,7 @@
 openapi: 3.2.0
 info:
   title: api-langs-bench chat API
-  version: 1.0.1
+  version: 1.1.0
   summary: The one API every backend implements.
   description: |
     ai-bootstrap's stateless chat, cut to text: the model's answer whole, or streamed as

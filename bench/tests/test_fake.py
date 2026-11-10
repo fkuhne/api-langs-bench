@@ -194,3 +194,10 @@ def test_the_settings_are_the_backends_environment() -> None:
         "FAKE_FIRST_TOKEN_MS": "100",
         "FAKE_TOKEN_GAP_MS": "20",
     }
+
+
+def test_the_fake_servers_answer_names_its_own_model() -> None:
+    got = answer(FakeSettings(), TOKENS, HI, {"max_tokens": 2}, "fake-server")
+
+    assert got.completion()["model"] == "fake-server"
+    assert got.events()[-1][1]["model"] == "fake-server"

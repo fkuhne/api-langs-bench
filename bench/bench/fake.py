@@ -58,13 +58,15 @@ class Answer:
     fails_at: int
     # When the failure comes, or the whole answer, in milliseconds from the start.
     due_ms: int
+    # The model the answer names: the in-process fake's, or the fake server's.
+    model: str = MODEL
 
     def completion(self) -> dict[str, Any]:
         """The whole answer's body, from `POST /api/chat`, when it doesn't fail."""
         return {
             "content": "".join(self.content),
             "reasoning": "".join(self.reasoning) or None,
-            "model": MODEL,
+            "model": self.model,
             "finish_reason": self.finish_reason,
             "usage": self.usage,
         }
@@ -76,7 +78,7 @@ class Answer:
         pieces += [("token", {"text": text}) for text in self.content]
         if self.failure is not None:
             return [*pieces[: self.fails_at], ("error", {"status": self.failure})]
-        end = {"model": MODEL, "finish_reason": self.finish_reason, "usage": self.usage}
+        end = {"model": self.model, "finish_reason": self.finish_reason, "usage": self.usage}
         return [*pieces, ("done", end)]
 
 
@@ -85,8 +87,10 @@ def answer(
     tokens: Sequence[str],
     messages: Sequence[Mapping[str, Any]],
     parameters: Mapping[str, Any],
+    model: str = MODEL,
 ) -> Answer:
-    """What the fakes answer these messages and parameters, with these settings and tokens."""
+    """What the fakes answer these messages and parameters, with these settings and tokens.
+    `model` is the name the answer carries: the fake server has its own."""
     length = settings.answer_tokens
     limit = parameters.get("max_tokens")
     if is_whole(limit) and 1 <= limit < length:
@@ -115,6 +119,7 @@ def answer(
         failure=failure,
         fails_at=fails_at,
         due_ms=due_ms,
+        model=model,
     )
 
 

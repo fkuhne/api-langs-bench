@@ -24,7 +24,7 @@ def test_the_whole_answer_with_its_reasoning(paced: Served, check: Check) -> Non
 
 
 def test_the_stream_keeps_the_pace(
-    paced: Served, check: Check, tolerance: Tolerance, backend: Backend, report: list[str]
+    paced: Served, check: Check, allowed: Tolerance, backend: Backend, report: list[str]
 ) -> None:
     body = {"messages": HI}
     # One stream first, untimed: a backend's first request on a new connection is slower, and
@@ -40,13 +40,13 @@ def test_the_stream_keeps_the_pace(
     headers_ms = (streamed.headers_at - streamed.sent) / 1e6
 
     report.append(
-        f"{backend.service}: {len(pieces)} events, lateness median {pace.median_ms:.2f} ms, "
+        f"{backend.name}: {len(pieces)} events, lateness median {pace.median_ms:.2f} ms, "
         f"min {min(pace.lateness_ms):.2f}, max {max(pace.lateness_ms):.2f}; "
         f"the last quarter {pace.drift_ms or 0:+.2f} ms on the first; "
         f"headers at {headers_ms:.1f} ms"
     )
     assert headers_ms < due[0], "the headers waited for the first token"
-    assert pace.problems(tolerance) == []
+    assert pace.problems(allowed) == []
 
 
 def timed(served: Served, path: str, body: Body, check: Check) -> float:
@@ -61,42 +61,40 @@ def timed(served: Served, path: str, body: Body, check: Check) -> float:
     return (time.perf_counter_ns() - sent) / 1e6
 
 
-def repeated(served: Served, path: str, body: Body, check: Check, tolerance: Tolerance) -> Pace:
+def repeated(served: Served, path: str, body: Body, check: Check, allowed: Tolerance) -> Pace:
     """The answer's lateness, asked for `REPEATS` times, after checking it once."""
     check.answers(served, body)
     due = served.expect(body, check.tokens).due_ms
     pace = Pace(tuple(timed(served, path, body, check) - due for _ in range(REPEATS)))
-    assert pace.problems(tolerance, drift=False) == []
+    assert pace.problems(allowed, drift=False) == []
     return pace
 
 
 def test_the_whole_answer_comes_at_the_last_tokens_time(
-    paced: Served, check: Check, tolerance: Tolerance
+    paced: Served, check: Check, allowed: Tolerance
 ) -> None:
     # 2 reasoning tokens and 3 answer tokens: the last is due at 180 ms.
-    repeated(
-        paced, "/api/chat", {"messages": HI, "parameters": {"max_tokens": 3}}, check, tolerance
-    )
+    repeated(paced, "/api/chat", {"messages": HI, "parameters": {"max_tokens": 3}}, check, allowed)
 
 
 @pytest.mark.parametrize("path", ["/api/chat", "/api/chat/stream"])
 def test_a_failure_comes_at_its_tokens_time(
-    paced: Served, check: Check, tolerance: Tolerance, path: str
+    paced: Served, check: Check, allowed: Tolerance, path: str
 ) -> None:
     # It takes the place of the fourth token, due at 160 ms.
     fake_error = {"status": 503, "after_tokens": 3}
 
     repeated(
-        paced, path, {"messages": HI, "parameters": {"fake_error": fake_error}}, check, tolerance
+        paced, path, {"messages": HI, "parameters": {"fake_error": fake_error}}, check, allowed
     )
 
 
 @pytest.mark.parametrize("path", ["/api/chat", "/api/chat/stream"])
 def test_a_malformed_fake_error_fails_at_once(
-    paced: Served, check: Check, tolerance: Tolerance, path: str
+    paced: Served, check: Check, allowed: Tolerance, path: str
 ) -> None:
     fake_error = {"status": 500}
 
     repeated(
-        paced, path, {"messages": HI, "parameters": {"fake_error": fake_error}}, check, tolerance
+        paced, path, {"messages": HI, "parameters": {"fake_error": fake_error}}, check, allowed
     )

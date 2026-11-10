@@ -1,6 +1,6 @@
 """The workloads, and where the backends are (spec/decisions/0018)."""
 
-from bench.backends import BACKENDS, url
+from bench.backends import BACKENDS, MODELS, UPSTREAMS, upstream_settings, url
 from bench.contract import Contract
 from bench.fake import answer
 from bench.workload import RATES, STREAM_20
@@ -60,3 +60,13 @@ def test_a_run_records_the_whole_workload() -> None:
 def test_a_backend_answers_at_its_service_name() -> None:
     assert url("go-gin", "/api/health") == "http://go-gin:8000/api/health"
     assert len(BACKENDS) == len(set(BACKENDS)) == 3
+
+
+def test_each_upstream_has_its_settings_and_its_models_name() -> None:
+    assert upstream_settings("fake") == {"LLM_PROVIDER": "fake"}
+    assert upstream_settings("fake-server") == {
+        "LLM_PROVIDER": "openai-compatible",
+        "LLM_BASE_URL": "http://fake-server:8080/v1",
+        "LLM_TIMEOUT_SECONDS": "1",
+    }
+    assert [MODELS[upstream] for upstream in UPSTREAMS] == ["fake", "fake-server"]

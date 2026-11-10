@@ -7,6 +7,8 @@ requires-python = ">=3.14,<3.15"
 # (spec/decisions/0014).
 dependencies = [
     "fastapi==0.143.0",
+    # The upstream client's HTTP library, which the OpenAI SDK runs on too (spec/decisions/0024).
+    "httpx2==2.13.1",
     "pydantic-settings==2.15.0",
     "uvicorn[standard]==0.54.0",
 ]
@@ -14,7 +16,6 @@ dependencies = [
 [dependency-groups]
 # The gates, as in ai-bootstrap, with the same pins (spec/decisions/0013).
 dev = [
-    "httpx2==2.13.1",
     "mypy==2.4.0",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",

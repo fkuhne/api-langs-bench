@@ -12,7 +12,8 @@ def test_the_contracts_example(defaults: Served, check: Check, contract: Contrac
 
     got = check.json(response, 200, "Completion")
 
-    assert normalized(got) == normalized(contract.examples.completion)
+    # The page's example is the in-process fake's; the fake server names its own model.
+    assert normalized(got) == normalized(contract.examples.completion | {"model": defaults.model})
 
 
 def test_the_contracts_example_streamed(defaults: Served, check: Check, contract: Contract) -> None:
@@ -20,7 +21,8 @@ def test_the_contracts_example_streamed(defaults: Served, check: Check, contract
 
     got = check.events(stream(defaults.client, contract.examples.request))
 
-    assert got == [(name, normalized(data)) for name, data in page]
+    *pieces, (done, end) = [(name, normalized(data)) for name, data in page]
+    assert got == [*pieces, (done, end | {"model": defaults.model})]
 
 
 def test_the_answer_wraps_around_after_the_last_token(defaults: Served, check: Check) -> None:

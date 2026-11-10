@@ -100,7 +100,7 @@ data: {"model":"fake","finish_reason":"length","usage":{"prompt_tokens":7,"compl
 | 503 | The upstream can't be reached, or is down | `{"detail": "…"}` |
 | 504 | The upstream didn't answer in time | `{"detail": "…"}` |
 
-These are ai-bootstrap's ([foundations](https://github.com/fkuhne/ai-bootstrap/blob/main/docs/foundations.md#errors)). Which of an upstream's own answers becomes which status is plan step 2.2. A stream answers only 422 itself; every other failure becomes an `error` event.
+These are ai-bootstrap's ([foundations](https://github.com/fkuhne/ai-bootstrap/blob/main/docs/foundations.md#errors)). Which of an upstream's own answers becomes which status is in [The upstream](#the-upstream). A stream answers only 422 itself; every other failure becomes an `error` event.
 
 ## Settings
 
@@ -108,13 +108,68 @@ Environment variables, read at start-up. A backend refuses to start with an inva
 
 | Variable | Default | What it sets |
 |---|---|---|
-| `LLM_PROVIDER` | `fake` | `fake` for the in-process fake. `openai-compatible` for an upstream, whose settings arrive in plan step 2.2. The names are ai-bootstrap's, but its default is `openai-compatible` |
+| `LLM_PROVIDER` | `fake` | `fake` for the in-process fake. `openai-compatible` for [the upstream](#the-upstream) the next five settings name. The names are ai-bootstrap's, but its default is `openai-compatible` |
+| `LLM_BASE_URL` | `http://fake-server:8080/v1` | Where the upstream's API is: an `http` or `https` URL |
+| `LLM_MODEL` | `local` | The model asked for. Not empty |
+| `LLM_API_KEY` | `local` | Sent as `Authorization: Bearer …`. Not empty |
+| `LLM_TIMEOUT_SECONDS` | `300` | How long the backend waits while nothing arrives from the upstream. A number above 0 |
+| `LLM_MAX_CONNECTIONS` | `1000` | How many connections to the upstream the backend opens at most, and keeps idle. A whole number, 1 or more |
 | `FAKE_ANSWER_TOKENS` | `256` | The answer's length when `max_tokens` doesn't cut it. A whole number, 1 or more |
 | `FAKE_REASONING_TOKENS` | `0` | Reasoning tokens before the answer. A whole number, 0 or more |
 | `FAKE_FIRST_TOKEN_MS` | `0` | Milliseconds from the start to the first token. A whole number, 0 or more |
 | `FAKE_TOKEN_GAP_MS` | `0` | Milliseconds between one token and the next. A whole number, 0 or more |
 
 With the defaults, the fakes answer as fast as they can. The workloads set the pace (plan step 3.2).
+
+## The upstream
+
+With `LLM_PROVIDER=openai-compatible`, a backend gets its answer from an upstream: llama.cpp's server, the [fake server](#the-fake-server), or any other OpenAI-compatible API. The part of the backend that makes the call is its upstream client, and every backend's follows these rules ([0024](../spec/decisions/0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md)).
+
+**The call.** `POST {LLM_BASE_URL}/chat/completions`, as JSON, with the request's `parameters` as given, and four fields the backend sets itself:
+
+```json
+{"max_tokens": 5, "model": "local", "messages": [{"role": "user", "content": "In one sentence, what is an LLM?"}],
+ "stream": true, "stream_options": {"include_usage": true}}
+```
+
+- **`stream` and `stream_options`** are sent for `POST /api/chat/stream` only. With them, the upstream sends the usage in a last chunk.
+- **A parameter's value isn't changed:** `5.0` stays `5.0`, and a number too large for a machine's integer keeps every digit.
+
+**Reading the answer:**
+
+| The contract's field | From the upstream's whole answer | From its stream |
+|---|---|---|
+| The text | `choices[0].message.content` | Each chunk's `choices[0].delta.content`, when it's a string that isn't empty: one `token` event |
+| The reasoning | `choices[0].message.reasoning_content`, or `reasoning` | Each chunk's `delta.reasoning_content`, or `reasoning`: one `reasoning` event, before the chunk's `token` event |
+| `model` | `model`, or `LLM_MODEL` if it gives none | The last chunk's that gives one |
+| `finish_reason` | `choices[0].finish_reason` | The last chunk's that gives one |
+| `usage` | `usage`'s three counts, or null unless all three are there | The same, from the chunk that carries it |
+
+- **A stream is lines of `data:`,** each a JSON chunk, until `data: [DONE]` or the end of the response. Other lines are skipped: blank ones, comments, and other fields.
+- **A chunk with no text sends no event,** such as the first, which carries only the role.
+
+**Failures.** Each becomes one of [the contract's errors](#errors), as in ai-bootstrap:
+
+| What the upstream does | The backend answers |
+|---|---|
+| Answers 429 | 429 |
+| Answers 502, 503, 504 or 529: it's down | 503 |
+| Answers any other status that isn't 2xx: it refuses the request | 502 |
+| Sends nothing for `LLM_TIMEOUT_SECONDS` | 504 |
+| Can't be reached, or closes the connection before its answer ends | 503 |
+| Sends a `data:` line whose JSON has an `error` | By the error's `code`, as if it were the status. Without a whole number as its code, 502 |
+| Sends an answer that isn't the API's, such as a chunk that isn't JSON | 502 |
+
+- **The `detail`** names the upstream as "The LLM endpoint", and carries the upstream's own reason when it gives one. It's never compared.
+- **The timeout bounds each wait, not the whole answer:** for a connection, for the answer to start, and for each next piece of its body. A stream that keeps sending is never cut.
+- **No retries.** A request reaches the upstream once.
+- **In a stream,** a failure before the first token is an `error` event too, since the backend has already answered 200.
+
+**Readiness.** `GET /api/health/ready` sends the upstream a request for one token: `{"model": …, "messages": [{"role": "user", "content": "ping"}], "max_tokens": 1}`. The upstream is ready if it answers 2xx, or 400, within 5 seconds, or within `LLM_TIMEOUT_SECONDS` if that's shorter.
+
+**The connections.** The backend keeps its connections to the upstream open and uses them again. It opens at most `LLM_MAX_CONNECTIONS`. When its client leaves, it closes the upstream's connection at once, which is how the upstream learns to stop.
+
+**Through the fake server,** a backend answers what it answers from its in-process fake, except that `model` is `fake-server`. A `fake_error` of 504 makes the fake server go silent, so its answer comes `LLM_TIMEOUT_SECONDS` after its time.
 
 ## The fakes
 
@@ -188,7 +243,7 @@ A `fake_error` shows as llama.cpp shows a failure, at the failing token's time:
 | 504 | No answer: the connection stays open and silent | No more chunks: the stream stays open and silent |
 
 - **A malformed `fake_error`,** and a body that isn't a chat request, answer HTTP 400 at once, with the type `invalid_request_error`.
-- **Which of these a backend turns into which of its own statuses** is plan step 2.2.
+- **Which of these a backend turns into which of its own statuses** is in [The upstream](#the-upstream): 429, 502, 503 and 504, in the table's order.
 
 ## Comparing answers
 
@@ -204,4 +259,4 @@ The [conformance suite](../docs/conformance.md) compares each backend's answers 
 - **ai-bootstrap's other endpoints:** `/api/llm/model`, `/api/modules`, and the served docs.
 - **Images, audio and video** in messages.
 - **Ports, containers and limits:** plan steps 1.2 and 3.1.
-- **The upstream's settings and error mapping:** plan step 2.2.
+- **Retries,** and an upstream's other routes, such as its list of models.
