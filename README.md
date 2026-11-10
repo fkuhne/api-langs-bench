@@ -73,7 +73,7 @@ Then check that every backend does the same work, and measure them:
 
 | Command | What it does | Time |
 |---|---|---|
-| `docker compose run --rm conformance` | Sends every backend the same requests, and checks each answer and each fake's timing: 321 checks | About 1 minute, once its images are built |
+| `docker compose run --rm conformance` | Sends every backend the same requests, alone and through the fake server, and checks each answer and each fake's timing: 627 checks | About 3 minutes, once its images are built |
 | `docker compose run --rm runner --passes 1` | Sends each backend the workload at 100, 500, 1,000 and 2,000 requests a second, saves each run in [`runs/`](runs/README.md), and prints a table | About 8 minutes |
 | `docker compose down` | Stops everything | |
 
@@ -95,7 +95,7 @@ Port 8001 is Python on FastAPI, 8002 is Go on `net/http`, and 8003 is Go on Gin.
 | Phase | What | Status |
 |---|---|---|
 | 1 | A thin slice: the contract, three backends, the conformance suite, a first runner, CI, the first numbers | Done |
-| 2 | The local upstreams: a fake server, each backend's client for it, and llama.cpp | Started: the [fake server](docs/fake-server.md) is built |
+| 2 | The local upstreams: a fake server, each backend's client for it, and llama.cpp | Under way: the [fake server](docs/fake-server.md) is built, and every backend [calls it](docs/backends.md#the-upstream-client) |
 | 3 | Measuring: the fairness rules, more workloads, how streams behave, memory and CPU | Planned |
 | 4 | A remote upstream: an imitation behind a network emulator, and Ollama Cloud | Planned |
 | 5 | Conversations stored in PostgreSQL | Planned |

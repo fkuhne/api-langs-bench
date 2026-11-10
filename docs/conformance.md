@@ -4,7 +4,7 @@ A benchmark that compares backends is only fair if each does exactly the same wo
 - **each answers the same way,** to the contract's letter: the same statuses, the same events, the same texts (R1);
 - **each one's fake keeps the contract's pace:** every token arrives at its time, never early, and never later than the machine's own timers explain (R3).
 
-It checks the fake upstream server the same way. The words used here, such as pace and lateness, are explained in [the guide](README.md#the-words-used-here).
+Each backend is checked twice: answering from the fake inside it, and passing on the fake server's answer through its upstream client. The fake upstream server is checked alone too. The words used here, such as pace and lateness, are explained in [the guide](README.md#the-words-used-here).
 
 ```text
 docker compose run --rm conformance
@@ -16,7 +16,8 @@ pytest's options may follow, such as `-k go-gin` for one backend. Why it's built
 
 - **Compose starts the three backends and the fake server first,** building any image that's missing. After their code changes, run `docker compose build` first.
 - **The suite restarts each of them itself,** with the settings each check needs: the fakes' pace is a setting, read at start-up. It does so through Docker's socket, which gives its container root on Docker's host. At the end, each is left running with the settings `.env` gives.
-- **The checks** are in [`bench/conformance/`](../bench/conformance/), each run against each backend. Their parts are in [`bench/bench/`](../bench/bench/), with unit tests under `bench-checks`:
+- **Each backend runs twice:** with `LLM_PROVIDER=fake`, and with `LLM_PROVIDER=openai-compatible` and the fake server as its upstream, both started with the same settings. Through the fake server, a backend must answer what it answers alone, except for the model's name, `fake-server`.
+- **The checks** are in [`bench/conformance/`](../bench/conformance/), each run against each backend from each upstream. Their parts are in [`bench/bench/`](../bench/bench/), with unit tests under `bench-checks`:
   - [`sse.py`](../bench/bench/sse.py) reads the stream strictly, and stamps each event with its arrival;
   - [`fake.py`](../bench/bench/fake.py) works out what the fakes answer, from the contract's rules. It's checked against the examples on the contract's page;
   - [`pace.py`](../bench/bench/pace.py) holds the pace rule and the timer probe;
@@ -24,7 +25,7 @@ pytest's options may follow, such as `-k go-gin` for one backend. Why it's built
 
 ## What it checks
 
-321 checks: 96 for each backend, and 33 for the fake server alone ([below](#the-fake-server-alone)). For each backend:
+627 checks: 99 for each backend from each of its two upstreams, and 33 for the fake server alone ([below](#the-fake-server-alone)). For each backend, from each upstream:
 
 | Group | Settings | What |
 |---|---|---|
@@ -32,9 +33,11 @@ pytest's options may follow, such as `-k go-gin` for one backend. Why it's built
 | The answer | The defaults | The contract's example, whole and streamed. `max_tokens`: 14 values, of which only a smaller positive whole number cuts the answer. Wrapping past the 175th token. `prompt_tokens`, with a non-breaking space and other white space. Other fields ignored. `done` against the whole answer |
 | Errors | The defaults | 19 invalid bodies on both paths, each answering 422. Each `fake_error` status, whole and streamed, at once and after 2 tokens. 11 malformed `fake_error`s, each answering 502 |
 | The pace | Paced: the first token at 100 ms, then one every 20 ms; 2 reasoning tokens, then 40 answer tokens | The reasoning, whole and streamed. The pace rule on a stream of 42 events. The whole answer, a failure and a malformed `fake_error`, each at its time |
-| Settings | Invalid | `FAKE_ANSWER_TOKENS=0`, `FAKE_TOKEN_GAP_MS=soon` and `LLM_PROVIDER=psychic` each stop the start-up |
+| Settings | Invalid | `FAKE_ANSWER_TOKENS=0`, `FAKE_TOKEN_GAP_MS=soon`, `LLM_PROVIDER=psychic`, `LLM_BASE_URL=fake-server:8080`, `LLM_TIMEOUT_SECONDS=0` and `LLM_MAX_CONNECTIONS=0` each stop the start-up |
 
 Every body and every event is also validated against the contract's schemas. Every stream is held to the wire format, its headers and its events' order.
+
+**Through the fake server,** the backend waits 1 s for its upstream, not 300, so each check of a `fake_error` of 504, which makes the fake server go silent, takes about a second.
 
 ### The fake server alone
 
@@ -57,6 +60,8 @@ An event's lateness is when it arrives, after the request was sent, less its due
 - **No event early,** by any amount.
 - **Lateness doesn't add up:** the median lateness of the last quarter of events is within T of the first quarter's.
 - **The median lateness is within T.**
+
+**Behind the fake server, T is 5 ms wider.** There an event crosses one more late wake-up, the backend's read of the upstream's chunk ([0024](../spec/decisions/0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md)).
 
 **T is the machine's timer error plus a margin of 10 ms.** The timer error is the p99 lateness of a probe the suite runs first, in its own container: 200 sleeps, each to a deadline 10 ms after the last one's. A single event, such as the whole answer, is asked for 5 times, and its median lateness must be within T. The timed stream is a backend's second: its first request on a new connection took 7 to 12 ms to send its headers, against 1 to 2 ms afterwards, and that isn't the fake's pace.
 
@@ -150,3 +155,23 @@ The same runner, later that day: both attempts of [run 42830465967](https://gith
 
 - **No event early,** in any attempt.
 - **Python's tokens now come 0.6 to 0.9 ms after Go's** at the median. That's what a clock of whole milliseconds costs: a wait ends at uvloop's first millisecond past the token's time.
+
+## Through the fake server, on 2026-11-10
+
+Plan step 2.2 gave each backend its upstream client ([0024](../spec/decisions/0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md)). On the Mac, with the host busy (a load average of 3 to 5): 627 checks passed, in 177.77 s. The lines on the pace:
+
+```text
+the machine's timers: 200 sleeps of 10 ms woke 2.06 ms late at the median, 5.19 ms at the p99; tolerance 15.19 ms (the p99 plus 10 ms)
+fake-server: 42 tokens, lateness median 6.09 ms, min 3.22, max 15.37; the last quarter -0.31 ms on the first; headers at 108.9 ms
+python-fastapi: 42 events, lateness median 9.83 ms, min 6.95, max 19.49; the last quarter -0.22 ms on the first; headers at 7.5 ms
+python-fastapi via fake-server: 42 events, lateness median 18.58 ms, min 16.29, max 36.38; the last quarter +0.37 ms on the first; headers at 11.2 ms
+go-nethttp: 42 events, lateness median 4.78 ms, min 1.83, max 9.93; the last quarter +1.00 ms on the first; headers at 1.6 ms
+go-nethttp via fake-server: 42 events, lateness median 9.12 ms, min 6.67, max 11.69; the last quarter +0.82 ms on the first; headers at 1.4 ms
+go-gin: 42 events, lateness median 4.36 ms, min 1.98, max 16.15; the last quarter +0.75 ms on the first; headers at 1.7 ms
+go-gin via fake-server: 42 events, lateness median 6.76 ms, min 5.34, max 18.93; the last quarter +0.34 ms on the first; headers at 1.7 ms
+```
+
+- **Every backend answers through the fake server what it answers alone:** the same 99 checks pass from both upstreams.
+- **Why the tolerance is wider there.** The run before this one failed one check of 627: Python's stream through the fake server came 17.75 ms late at the median, against a T of 15.34 ms. Both Go servers were close, at 10.36 and 14.13 ms. Behind an upstream, an event crosses three late wake-ups in Docker's VM, not two: the fake server's timer, the backend's read, and the client's read. With 5 ms more, Python's 18.58 ms above is within its T of 20.19 ms.
+- **That's the Mac's VM again.** On Linux's timers the margin is loose in both cases; CI's lines will say how late each backend is there.
+- **Python is later than Go through the fake server,** by about 9 ms here against 2 to 5 ms alone. One stream at a time, on an idle VM, says little about load; plan step 2.4 measures it.

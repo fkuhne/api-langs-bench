@@ -1,6 +1,6 @@
 # 0024. Each backend's upstream client: its plain HTTP client, one pool setting, no retries
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-10
 
 ## Context
@@ -26,7 +26,7 @@ ai-bootstrap, whose chat the contract is cut from, calls its upstream through th
 
 ## Decision
 
-Each backend calls its upstream with its ecosystem's plain HTTP client, not an OpenAI SDK: httpx2 in Python, and `net/http` in Go. Every backend follows the same rules, written in [the contract](../../contract/README.md) with this step.
+Each backend calls its upstream with its ecosystem's plain HTTP client, not an OpenAI SDK: httpx2 in Python, and `net/http` in Go. Every backend follows the same rules, written in [the contract](../../contract/README.md#the-upstream).
 
 - **Why not the SDK.** A backend then shows every line of the call, and the comparison is between HTTP clients, not between SDKs of uneven quality. Later languages don't all have an official SDK.
 - **Python uses httpx2,** the client the OpenAI SDK itself runs on, already pinned here.
@@ -71,12 +71,20 @@ Each backend calls its upstream with its ecosystem's plain HTTP client, not an O
 
 ## Assumptions to verify
 
-- [ ] Through the fake server, every backend passes the checks it passes from its in-process fake, the pace rule included. To check in this step.
-- [ ] A stream longer than the timeout isn't cut, in either language, while its pieces keep coming. To check in this step.
-- [ ] A client that leaves a backend closes the upstream's connection: the fake server logs it. To check in this step.
+- [x] Through the fake server, every backend passes the checks it passes from its in-process fake, the pace rule included. To check in this step. *2026-11-10, on the Mac: yes for the answers, 627 checks passed. The pace rule needed 5 ms more behind the fake server: Python's stream came 17.75 ms late at the median against a tolerance of 15.34 ms ([conformance](../../docs/conformance.md#through-the-fake-server-on-2026-11-10)). On Linux's timers it's still to see: CI, with this step's push.*
+- [x] A stream longer than the timeout isn't cut, in either language, while its pieces keep coming. To check in this step. *2026-11-10: a stream 1.54 s long ended with `done` under a 1 s timeout, from all three backends ([backends](../../docs/backends.md#the-upstream-client)). The suite's paced stream, 920 ms long under the same timeout, passes too.*
+- [x] A client that leaves a backend closes the upstream's connection: the fake server logs it. To check in this step. *2026-11-10: a client that left at 120 ms was logged by the fake server at 114.6, 118.4 and 131.8 ms from its own start, for Python, `net/http` and Gin ([backends](../../docs/backends.md#the-upstream-client)). Once each, by hand: the suite doesn't check it yet.*
 - [ ] 1,000 connections don't bind any backend at the rates measured. To check with plan step 2.4's runs.
 - [ ] The idle expiry's defaults, 5 s in httpx2 and 90 s in Go, don't change a steady run. Unchecked; plan step 3.1.
 - [ ] llama.cpp's real failures fit this mapping. To check at plan step 2.3.
+
+## Learned while building it
+
+- **The pace rule's tolerance is 5 ms wider behind the fake server.** An event there crosses one more late wake-up, which on the Mac's VM is worth several milliseconds. This amends [0017](0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md)'s rule for that case alone.
+- **Go's `http.Client.Timeout` couldn't be used:** it bounds the whole answer. The Go client keeps a timer of its own, started again each time something arrives.
+- **Closing a body isn't enough to leave in Go:** its client reads on for up to 50 ms. The Go client ends the request's context first.
+- **Calling an upstream costs a backend much of its CPU.** In a sketch on the Mac, under 1 CPU, Python ran out between 300 and 500 streams a second through the fake server, and both Go servers were at 95% and 98% of their CPU at 2,000, against 500 and 4,000 from their in-process fakes ([backends](../../docs/backends.md#the-upstream-client)). Plan step 2.4 measures it.
+- **The contract's version is 1.1.0,** with the upstream's rules.
 
 ## Sources
 
@@ -84,4 +92,5 @@ Each backend calls its upstream with its ecosystem's plain HTTP client, not an O
 - [openai-python's `_constants.py`](https://github.com/openai/openai-python/blob/main/src/openai/_constants.py), read on 2026-11-10: its limits, timeout and retries.
 - Our runs on 2026-11-10: `httpx2._config.DEFAULT_LIMITS` in the Python backend's checks image, and `http.DefaultTransport`'s fields under Go 1.27.3.
 - ai-bootstrap's files named above, read on 2026-11-10.
+- Our runs on 2026-11-10 ([backends](../../docs/backends.md#the-upstream-client), [conformance](../../docs/conformance.md#through-the-fake-server-on-2026-11-10)).
 - The owner's picks, 2026-11-10.

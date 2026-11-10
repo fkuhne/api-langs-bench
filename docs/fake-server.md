@@ -4,7 +4,7 @@ A backend's job is to call a language model and pass its answer on. To measure w
 
 The fake upstream server takes its place. It's a small program that answers the way llama.cpp's server does, with the contract's fixed tokens on the contract's timetable. A backend calls it over HTTP with the same client code it calls llama.cpp with. So a run against it measures that client too: opening and reusing connections, reading the stream, and turning each chunk into an event ([0004](../spec/decisions/0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)).
 
-How it's built, and why, is in [0023](../spec/decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md). It's plan step 2.1, and the backends' clients for it are plan step 2.2. The words used here are explained in [the guide](README.md#the-words-used-here). It starts with:
+How it's built, and why, is in [0023](../spec/decisions/0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md). It's plan step 2.1. The backends call it since plan step 2.2, with `LLM_PROVIDER=openai-compatible` ([the upstream client](backends.md#the-upstream-client)). The words used here are explained in [the guide](README.md#the-words-used-here). It starts with:
 
 ```text
 docker compose up -d --wait fake-server

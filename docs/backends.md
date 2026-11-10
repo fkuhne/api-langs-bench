@@ -199,7 +199,49 @@ docker run --rm -i --network api-langs-bench_default python:3.14.8-slim-trixie \
 - **Size, start-up and idle memory** set Go apart from Python by about ten times. Gin costs more than `net/http` in size, through its dependencies, and a little in memory and start-up.
 - **The pace and liveness don't set any of them apart here.** The VM's late wake-ups are larger than what each adds ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)). The benchmark's own runs start at plan step 1.6.
 
-## Timers in Docker's VM on this Mac
+## The upstream client
+
+Built in plan step 2.2 ([0024](../spec/decisions/0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md)). With `LLM_PROVIDER=openai-compatible`, a backend stops answering from the fake inside it, and calls an upstream over HTTP: the [fake server](fake-server.md) for now. The upstream client is the code that makes that call. What it must do is in [the contract](../contract/README.md#the-upstream), the same for every backend. Each is written with its ecosystem's plain HTTP client, not an OpenAI SDK.
+
+| | Python, FastAPI | Go, `net/http` and Gin |
+|---|---|---|
+| The code | [`app/upstream/`](../backends/python-fastapi/app/upstream/) | [`internal/upstream/`](../backends/go/internal/upstream/), shared by both backends |
+| The HTTP client | httpx2 2.13.1, which the OpenAI SDK runs on too | `net/http`, from a copy of Go's default transport |
+| The pool | `Limits(max_connections, max_keepalive_connections)`, both at `LLM_MAX_CONNECTIONS` | `MaxConnsPerHost`, `MaxIdleConnsPerHost` and `MaxIdleConns`, all at `LLM_MAX_CONNECTIONS` |
+| An idle connection is kept | 5 s, httpx2's default | 90 s, Go's default |
+| The timeout | `Timeout(LLM_TIMEOUT_SECONDS)`: httpx2 applies it to each wait | A timer the client starts again each time something arrives. Go's own `Client.Timeout` would bound the whole answer |
+| The stream is read | Line by line, with `aiter_lines`, each chunk parsed with `json.loads` | Line by line, with `bufio.Scanner`, each chunk decoded into a struct with `encoding/json` |
+| A client that leaves | Closing the generator closes the response | The request's context ends, then the body is closed. Without the first, Go's client reads on for up to 50 ms |
+| Tests | 67, against httpx2's mock transport | 18, with 40 cases inside them, against a real server on a local socket |
+
+**Checked through the fake server, on 2026-11-10,** on the Mac named at the top of this page, each backend under 1 CPU and 512 MiB, with the fake server paced at 50 ms and 10 ms:
+
+| Check | Python, FastAPI | Go, `net/http` | Go, Gin |
+|---|---|---|---|
+| A stream of 150 tokens, 1.54 s long, under a timeout of 1 s | Ended with `done`, at 1.56 s | At 1.55 s | At 1.54 s |
+| The client leaves at 120 ms: when the fake server saw its stream closed, from its own start | 114.6 ms, 7 tokens sent | 118.4 ms, 7 tokens | 131.8 ms, 9 tokens |
+| Readiness | `{"status":"ok","checks":{"llm":"ok"}}` | The same | The same |
+
+- **The timeout doesn't cut a long stream,** in either language.
+- **Each backend closes the upstream's connection when its client leaves.** Gin's was seen about 13 ms later than the others', once. How fast each does it under load is plan step 3.3.
+
+**A first look under load,** to see that the client holds: the `stream-20` request at fixed rates for 15 s, with oha, on the same busy Mac. Nothing was saved as a run, so these are a sketch, not results; plan step 2.4 measures it.
+
+| Backend | Rate | p50 | p99 | Its CPU | The fake server's CPU |
+|---|---|---|---|---|---|
+| Python, FastAPI | 100/s | 244.5 ms | 250.7 ms | 41% of one CPU | 10% |
+| Python, FastAPI | 300/s | 244.4 ms | 375.6 ms | 91% | 14% |
+| Python, FastAPI | 500/s | 3,183.6 ms: it answered 341 a second | | 101% | 13% |
+| Go, `net/http` | 100/s | 242.4 ms | 255.3 ms | 31% | 17% |
+| Go, `net/http` | 1,000/s | 241.5 ms | 278.4 ms | 83% | 48% |
+| Go, `net/http` | 2,000/s | 242.7 ms | 395.2 ms | 95% | 62% |
+| Go, Gin | 100/s | 242.6 ms | 255.8 ms | 37% | 24% |
+| Go, Gin | 1,000/s | 241.5 ms | 251.4 ms | 80% | 43% |
+| Go, Gin | 2,000/s | 241.9 ms | 268.8 ms | 98% | 54% |
+
+- **Calling an upstream costs each backend a large share of its CPU.** From their in-process fakes, on this Mac, Python kept 500 a second and Go 4,000 ([runner](runner.md)). Through the fake server, Python ran out between 300 and 500, and both Go servers were at the end of their CPU at 2,000.
+- **The fake server stayed far from its own ceiling,** at 62% of a CPU or less.
+- **CPU doesn't grow in step with the rate on this VM:** Go's was 31% at 100 a second and 83% at 1,000. An idle virtual CPU costs more to wake ([below](#where-the-delay-comes-from)).
 
 In a bare `python:3.14.8-slim-trixie` container, with no backend involved, each sleep of 20 ms, 200 times, wakes this much later than asked:
 
