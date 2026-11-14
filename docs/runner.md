@@ -1,6 +1,6 @@
 # The runner
 
-The runner is what makes the benchmark's numbers. For each backend in turn, it starts the backend alone, has a load generator send it the same request at a fixed rate for 30 s, and saves what was measured in one file in [`runs/`](../runs/README.md). At the end it prints a table. The words used here, such as run, pass and p99, are explained in [the guide](README.md#the-words-used-here).
+The runner is what makes the benchmark's numbers. For each backend in turn, it starts the backend alone, has a load generator send it the same request at a fixed rate for 30 s, and saves what was measured in one file in [`runs/`](../runs/README.md). It does so with the backend answering from the fake inside it, then through the fake server. At the end it prints a table for each. The words used here, such as run, pass, upstream and p99, are explained in [the guide](README.md#the-words-used-here).
 
 One command does it all:
 
@@ -8,26 +8,30 @@ One command does it all:
 docker compose run --rm runner
 ```
 
-By default it runs every backend at four rates, three times over: 36 runs, in about 25 minutes: the first numbers' runs started within 24 min 31 s ([below](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx)). Options may follow the command:
+By default it runs every backend from both fakes, at five rates, three times over: 105 runs, in about 73 minutes: one pass took 1,458 s on the Mac ([below](#a-check-of-the-upstreams-runs-on-2026-11-13)). Options may follow the command:
+- `--upstream fake-server` runs from one upstream: `fake`, the fake inside each backend; `fake-server`; or `llama-cpp`. It may be given more than once. llama.cpp is run only when named, and must be started first, since it needs its model ([llama.cpp](llama-cpp.md));
 - `--backend go-gin` runs one backend; it may be given more than once;
 - `--rate 100` runs one rate, in requests a second; it may be given more than once;
 - `--passes 1` runs everything once.
 
-Why it's built this way is in [0018](../spec/decisions/0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md) and [0020](../spec/decisions/0020-the-first-numbers-a-ladder-of-rates-under-provisional-limits-three-passes.md). This is the first runner, of plan steps 1.6 and 1.8: one workload, with latency and errors. The limits and the rates are provisional, and the other workloads and the resources arrive in Phase 3.
+Why it's built this way is in [0018](../spec/decisions/0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md), [0020](../spec/decisions/0020-the-first-numbers-a-ladder-of-rates-under-provisional-limits-three-passes.md) and [0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md). The limits and the rates are provisional, and the other workloads and the resources arrive in Phase 3.
 
-To make the first numbers on a machine, see [The first numbers](#the-first-numbers). The ones made so far are [below](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx).
+To make numbers on a machine, see [Making the numbers](#making-the-numbers). The ones made so far are [below](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx), and this runner's check on the Mac is [here](#a-check-of-the-upstreams-runs-on-2026-11-13).
 
 ## What a run is
 
-A run is one workload sent to one backend at one rate, once. For each run, the runner ([`runner.py`](../bench/bench/runner.py)):
+A run is one workload sent to one target at one rate, once. The target is a backend answering from one upstream, or an upstream alone. For each run, the runner ([`runner.py`](../bench/bench/runner.py)):
 1. stops the other backends;
-2. starts this one in a new container, with the workload's settings, and waits until it's ready;
+2. starts the fake server, if the run goes through it, then the backend, each in a new container, with the workload's settings, and waits until they're ready;
 3. measures how late the machine's timers wake, with the conformance suite's probe ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md));
-4. sends the workload for 5 s, as a warm-up that isn't counted;
-5. sends it for 30 s, and keeps what the load generator measured;
-6. reads the backend's limits back from Docker, and writes the run's file.
+4. asks for one answer, and keeps its size in bytes, to tell a whole answer from a cut one;
+5. sends the workload for 5 s, as a warm-up that isn't counted;
+6. sends it for 30 s, and keeps what the load generator measured;
+7. reads the backend's limits back from Docker, and writes the run's file.
 
-**The passes.** A pass runs every backend at every rate, lowest first. The backends' order rotates from one pass to the next, so no backend always runs first. At the end, the runner prints a Markdown table of its runs: each number's median over the passes, and its range.
+**The passes.** A pass runs every target at every rate, lowest first, one upstream after the other. The targets' order rotates from one pass to the next, so none always runs first. At the end, the runner prints a Markdown table for each upstream: each number's median over the passes, and its range.
+
+**The upstream alone.** Through the fake server or llama.cpp, each pass also sends the same load straight to the upstream, with no backend: the request a backend's own client sends it. That run is what the backends are compared with. **The time a backend adds** is its median less the upstream's own, in the same pass and at the same rate ([0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)). The fake server's own lateness and the load generator's are in both runs, so they cancel out.
 
 **The limits,** provisional until plan step 3.1: every backend's container gets 1 CPU and 512 MiB, from `BACKEND_CPUS` and `BACKEND_MEMORY` in `.env`. Under a 1-CPU limit, Go 1.27.3 sets `GOMAXPROCS` to 2, its minimum, against 4 without one (our run, 2026-11-10). The load generator has no limit, and shares the machine's other CPUs.
 
@@ -36,8 +40,10 @@ At the end, every backend is left running with the settings `.env` gives. Like t
 **The workload,** `stream-20` ([`workload.py`](../bench/bench/workload.py)):
 - `POST /api/chat/stream`, asking for 20 tokens;
 - the fake paced: the first token at 50 ms, then one every 10 ms. Each stream is due to end at 240 ms, so about 24 are open at once;
-- 100, 500, 1,000 and 2,000 requests a second, provisional until plan step 3.2;
+- 100, 200, 500, 1,000 and 2,000 requests a second, provisional until plan step 3.2;
 - connections sized to the rate: four times the streams open at once, so 96 at 100 a second and 1,920 at 2,000. Why is [below](#what-the-ladder-rests-on).
+
+**For llama.cpp,** another workload, `llama-20`: the same stream of 20 tokens, sent 30 times, one at a time, each when the last has ended, after 3 that aren't counted. A real model's own time is nearly all of the answer's, and it serves 4 requests at once, so a fixed rate would measure its queue. Each request carries a seed, a temperature of 0 and reasoning off, so the model makes the same 20 tokens every time. Each goes on a new connection, since llama.cpp closes its connection after a stream ([0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)).
 
 **The load generator** is [oha](https://github.com/hatoo/oha) 1.16.0, run inside the runner's container, on Compose's network ([`oha.py`](../bench/bench/oha.py)):
 - **Open-loop:** `-q 100` sets the arrival rate, whatever the backend does. `--latency-correction` counts each request's latency from when it was due to be sent, not from when it went.
@@ -47,42 +53,53 @@ At the end, every backend is left running with the settings `.env` gives. Like t
 
 ## A run's file
 
-`runs/<the start, in UTC>-<the backend>-<the rate>rps.json`, written once and never edited. It holds:
+`runs/<the start, in UTC>-<the target>-<the load>.json`, written once and never edited. The target is the backend and its upstream, such as `go-gin-fake-server`, or an upstream alone, such as `fake-server-alone`. The load is a rate, such as `500rps`, or `30x1` for 30 requests one at a time. It holds:
 
 | Field | What |
 |---|---|
-| `schema` | 2. The first three runs, of plan step 1.6, are 1: no limits, no pass, and no rate in their names |
+| `schema` | 3. Runs made before 2026-11-13 are 2: no upstream in their names, and `upstream` as a word. The first three, of plan step 1.6, are 1: no limits, no pass, and no rate in their names |
 | `pass` | Which pass the run belongs to |
-| `backend` | The Compose service, its image's ID, and its limits as Docker holds it to them: CPUs and bytes of memory, 0 for none |
-| `upstream` | `fake`, the in-process fake |
-| `workload` | The request, the rate, the durations, the connections, and the fake's settings |
+| `target` | What the load was sent to, as in the file's name |
+| `backend` | The Compose service, its image's ID, and its limits as Docker holds it to them: CPUs and bytes of memory, 0 for none. Null when the load went straight to the upstream |
+| `upstream` | Its name, `fake`, `fake-server` or `llama-cpp`, and its image's ID. The in-process fake has none: it's part of the backend |
+| `workload` | The request, the rate, the durations, the connections, and the fake's settings; or, one at a time, the count of requests |
 | `load_generator` | oha's version, and its whole command |
 | `repository` | The commit, and `dirty`: whether a tracked file differed from it |
 | `machine` | Your description of the host, from `BENCH_MACHINE` in `.env`; Docker's version, OS, kernel, architecture, CPUs and memory; Compose's version; and the timer probe's median and p99 |
-| `results` | The requests sent and due, the rate reached, whether the rate was kept (99% of the requests due were sent), the counts by status and by error, the latency's p50, p95 and p99, and the time to the first byte |
+| `results` | The requests sent and due, the rate reached, whether the load was kept (99% of the requests due were sent), the counts by status and by error, the bytes of every answer together, one whole answer's bytes, whether every answer was whole, the latency's p50, p95 and p99, and the time to the first byte |
 | `oha` | oha's whole output |
 
 **What the file doesn't hold yet:** the backend's memory and CPU use, and each event's time. The limits are provisional until plan step 3.1, and timing numbers from a Mac never reach the report ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
 
 ## Reading a table of runs
 
-The runner's table has one row for each backend at each rate:
+The runner prints one table for each upstream, with one row for each target at each load:
 
 | Column | What it says |
 |---|---|
-| Rate | How many requests a second the load generator started |
+| Target | A backend, or the upstream alone |
+| Load | How many requests a second the load generator started; or how many it sent one at a time |
 | Runs | How many passes the row sums up |
 | p50, ms | The median latency: half of the requests ended sooner. With several passes, it's the median of the passes' p50s, and their range in brackets |
 | p99, ms | The latency 99 requests in 100 beat: the slow tail |
+| First token p50, ms | The median time to the first piece of the answer, from when the request was sent |
+| Added p50, ms | What the backend added to the whole answer over its upstream alone: its p50 less the upstream's, pass by pass |
+| Added first token, ms | The same, for the first token |
 | Requests | How many were sent, over all the passes |
 | Not 200 | How many of them failed, or got another status than 200 |
-| Kept the rate | In how many passes the load generator sent at least 99% of the requests that were due |
+| Kept the load | In how many passes the load generator sent at least 99% of the requests that were due |
+| All answers whole | In how many passes every request got a 200 and a body of a whole answer's size |
 
 How to read a row:
-- **Every stream of the `stream-20` workload is due to end at 240 ms,** by the fake's timetable. So a p50 of 241.0 ms says the backend added 1.0 ms at the median.
-- **A healthy row** has a p50 and a p99 just above 240 ms, nothing under "Not 200", and its rate kept in every pass.
-- **A row that didn't keep its rate** is a backend past its ceiling. Requests waited in the load generator, so the latencies run to seconds, and the percentiles leave out the requests that were never sent. Such a row says "it can't serve this rate", and its figures say little more.
+- **Every stream of the `stream-20` workload is due to end at 240 ms,** by the fake's timetable, and its first token at 50 ms. So from the in-process fake, a p50 of 241.0 ms says the backend added 1.0 ms at the median.
+- **Through an upstream, read the "Added" columns.** The upstream is late by itself, and its row says by how much. A backend's `+1.1` says its median stream ended 1.1 ms after the upstream's own.
+- **"n/a"** is a row with nothing to compare with: the upstream alone, or the in-process fake, which has no upstream. **"none"** is a comparison that can't be made: in that pass, the backend or the upstream didn't keep its load, or not every answer was whole.
+- **A healthy row** has a p50 and a p99 just above 240 ms, nothing under "Not 200", its load kept and its answers whole in every pass.
+- **A 200 isn't always an answer.** A stream answers 200 as soon as its request is valid. If its upstream then fails, the failure comes as an `error` event in a short body, sometimes within 2 ms. So before each run, the runner asks for one answer and keeps its size: both fakes answer the same request with the same bytes every time. A run's answers were all whole when every request got a 200 and the bytes add up. A real model's answers vary in size, so through llama.cpp only the statuses are checked ([0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)).
+- **A row that didn't keep its load** is a backend past its ceiling. Requests waited in the load generator, so the latencies run to seconds, and the percentiles leave out the requests that were never sent. Such a row says "it can't serve this rate", and its figures say little more.
+- **The first token's time isn't corrected for waiting:** oha counts it from when a request was sent, not from when it was due ([0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)). Read it only in rows that kept their load.
 - **A wide range in brackets** says the passes disagreed: something disturbed one of them, on the machine or in the backend.
+- **The difference of two medians isn't the median of each request's difference.** It describes the typical request, and says nothing of the tail. Each event's own time is plan step 3.3's.
 
 ## The load generator, measured alone
 
@@ -205,15 +222,90 @@ The runs are `runs/20261110T104652Z-python-fastapi-100rps.json` to `runs/2026111
   - when requests fail, the percentiles cover what oha timed, so a p50 of 479 ms beside 61% of failures says little.
 - **Both Go servers kept every rate,** with a p50 within 2.2 ms of the 240 ms due.
 
-## The first numbers
+## A check of the upstreams' runs, on 2026-11-13
 
-Plan step 1.8's numbers are made on the machine the owner names, with one command. On that machine:
+Plan step 2.4's runner, checked on the development Mac before the owner's run ([0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)): an Apple M3 with 8 cores and 8 GB, on macOS 14.3; Docker 29.5.2 in Colima's VM, with 4 CPUs and 5 GiB. The host was busy, with a load average of 3 to 7; the timer probe read 2.0 to 3.3 ms late at the median. These check the runner, and aren't the step's numbers: one pass from the fakes, on a busy Mac, whose timing numbers are for development ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
 
-1. **Get the repository,** and Docker with Compose. Docker 28.0.4 with Compose 2.38.2, and Docker 29.5.2 with Compose 5.5.1, are known to work ([gates](gates.md#in-ci)).
+**From both fakes,** `docker compose run --rm runner --passes 1`: 35 runs in 1,458 s, from `runs/20261113T194341Z-python-fastapi-fake-100rps.json` to `runs/20261113T200703Z-fake-server-alone-2000rps.json`. The tables the runner printed:
+
+**From each backend's in-process fake**
+
+| Target | Load | Runs | p50, ms | p99, ms | First token p50, ms | Added p50, ms | Added first token, ms | Requests | Not 200 | Kept the load | All answers whole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `python-fastapi` | 100/s | 1 | 245.1 | 266.2 | 54.2 | n/a | n/a | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 200/s | 1 | 243.7 | 251.4 | 53.1 | n/a | n/a | 6000 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 500/s | 1 | 243.6 | 416.5 | 52.9 | n/a | n/a | 15000 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 1000/s | 1 | 5192.8 | 9521.2 | 553.8 | n/a | n/a | 21583 | 0 | 0 of 1 | 1 of 1 |
+| `python-fastapi` | 2000/s | 1 | 393.5 | 3091.4 | 126.0 | n/a | n/a | 59999 | 35027 | 1 of 1 | 0 of 1 |
+| `go-nethttp` | 100/s | 1 | 241.3 | 247.4 | 51.2 | n/a | n/a | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 200/s | 1 | 241.1 | 245.2 | 51.0 | n/a | n/a | 6000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 500/s | 1 | 241.2 | 251.6 | 51.1 | n/a | n/a | 15000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 1000/s | 1 | 241.5 | 262.6 | 51.4 | n/a | n/a | 30000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 2000/s | 1 | 242.6 | 277.5 | 52.3 | n/a | n/a | 59999 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 100/s | 1 | 241.4 | 245.3 | 51.2 | n/a | n/a | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 200/s | 1 | 241.1 | 247.6 | 51.0 | n/a | n/a | 6000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 500/s | 1 | 241.2 | 253.1 | 51.1 | n/a | n/a | 15000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 1000/s | 1 | 241.7 | 269.9 | 51.5 | n/a | n/a | 29999 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 2000/s | 1 | 242.1 | 273.6 | 51.8 | n/a | n/a | 60000 | 0 | 1 of 1 | 1 of 1 |
+
+**Through the fake server**
+
+| Target | Load | Runs | p50, ms | p99, ms | First token p50, ms | Added p50, ms | Added first token, ms | Requests | Not 200 | Kept the load | All answers whole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `fake-server alone` | 100/s | 1 | 241.1 | 245.6 | 51.1 | n/a | n/a | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `fake-server alone` | 200/s | 1 | 241.0 | 250.8 | 50.9 | n/a | n/a | 6000 | 0 | 1 of 1 | 1 of 1 |
+| `fake-server alone` | 500/s | 1 | 241.0 | 247.4 | 50.9 | n/a | n/a | 15000 | 0 | 1 of 1 | 1 of 1 |
+| `fake-server alone` | 1000/s | 1 | 241.0 | 250.9 | 51.0 | n/a | n/a | 29999 | 0 | 1 of 1 | 1 of 1 |
+| `fake-server alone` | 2000/s | 1 | 241.2 | 254.8 | 51.1 | n/a | n/a | 60000 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 100/s | 1 | 244.4 | 446.7 | 53.8 | +3.3 | +2.7 | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 200/s | 1 | 243.0 | 273.6 | 52.6 | +2.0 | +1.7 | 6000 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 500/s | 1 | 4440.5 | 7589.8 | 419.4 | none | none | 11688 | 0 | 0 of 1 | 1 of 1 |
+| `python-fastapi` | 1000/s | 1 | 356.8 | 2383.5 | 307.2 | none | none | 30000 | 8068 | 1 of 1 | 0 of 1 |
+| `python-fastapi` | 2000/s | 1 | 920.2 | 4721.6 | 617.8 | none | none | 54064 | 22242 | 0 of 1 | 0 of 1 |
+| `go-nethttp` | 100/s | 1 | 241.8 | 249.7 | 51.7 | +0.6 | +0.6 | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 200/s | 1 | 241.7 | 250.9 | 51.6 | +0.7 | +0.6 | 6000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 500/s | 1 | 241.3 | 253.9 | 51.3 | +0.3 | +0.4 | 15000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 1000/s | 1 | 241.5 | 251.7 | 51.4 | +0.4 | +0.4 | 29998 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 2000/s | 1 | 241.4 | 253.5 | 51.3 | +0.2 | +0.3 | 59997 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 100/s | 1 | 242.1 | 248.4 | 51.9 | +0.9 | +0.8 | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 200/s | 1 | 241.9 | 252.4 | 51.7 | +0.9 | +0.8 | 6000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 500/s | 1 | 241.5 | 250.7 | 51.4 | +0.5 | +0.5 | 15000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 1000/s | 1 | 241.4 | 249.3 | 51.3 | +0.4 | +0.4 | 30000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 2000/s | 1 | 241.6 | 267.6 | 51.5 | +0.4 | +0.4 | 59999 | 0 | 1 of 1 | 1 of 1 |
+
+**Through llama.cpp,** `docker compose run --rm runner --upstream llama-cpp`, its three passes: 12 runs in 188 s, ending with `runs/20261113T201042Z-go-nethttp-llama-cpp-30x1.json`.
+
+**Through llama.cpp**
+
+| Target | Load | Runs | p50, ms | p99, ms | First token p50, ms | Added p50, ms | Added first token, ms | Requests | Not 200 | Kept the load | All answers whole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `llama-cpp alone` | 30, one at a time | 3 | 270.0 (260.8 to 286.3) | 306.0 (280.8 to 519.6) | 23.5 (23.0 to 24.6) | n/a | n/a | 90 | 0 | 3 of 3 | 3 of 3 |
+| `python-fastapi` | 30, one at a time | 3 | 275.0 (266.8 to 279.9) | 362.5 (307.5 to 365.0) | 24.9 (24.0 to 25.8) | +6.0 (-11.3 to +9.9) | +1.9 (-0.6 to +2.3) | 90 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 30, one at a time | 3 | 279.2 (275.3 to 323.2) | 396.9 (380.7 to 644.2) | 25.3 (24.4 to 27.2) | +5.2 (-7.1 to +62.4) | +1.8 (-0.3 to +4.2) | 90 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 30, one at a time | 3 | 266.1 (264.5 to 334.9) | 409.2 (276.9 to 474.1) | 24.2 (23.7 to 28.6) | +5.3 (-5.6 to +48.6) | +1.2 (+0.2 to +4.0) | 90 | 0 | 3 of 3 | 3 of 3 |
+
+What the runs show:
+- **The fake server alone kept every rate to 2,000 a second,** with a p50 of 241.0 to 241.2 ms and every answer whole. On this Mac it isn't what limits a backend (R4).
+- **Both Go servers added 0.2 to 0.9 ms over the fake server,** at every rate, with every answer whole: a little more at 100 and 200 a second than at 1,000 and 2,000. The first token's added time is nearly the same, so it's paid once, before the first token, not on every token.
+- **Python added 3.3 ms at 100 a second and 2.0 ms at 200,** through the fake server. It didn't keep 500: it answered 390 a second, while from its in-process fake it kept 500. Calling an upstream costs it about a fifth of its ceiling here.
+- **Through llama.cpp, a backend's cost doesn't show.** llama.cpp alone took 260.8 to 286.3 ms at the median from one pass to the next; the backends' added time ranged from -11.3 to +62.4 ms. The medians of the added time, +5.2 to +6.0 ms, are within that noise. The model does the same work every time: six requests with the same seed returned the same 20 tokens.
+- **Each file says `"dirty": true`:** the runner's own code wasn't committed yet when they were made, as for the check of 2026-11-10. It's the code of commit `a01fd95`.
+- **The files take 376 kB,** 4.7 to 17.6 kB each: the fake server alone has the largest, since its chunks are llama.cpp's.
+
+What building it taught:
+- **A 200 isn't always an answer.** In the first check of this runner, Python through the fake server at 2,000 a second had a p50 of 1.9 ms, and an "added" time of -239 ms. Its streams answered 200 at once, then ended with an `error` event when its upstream client couldn't keep up. So each run now keeps one whole answer's size, and says whether every answer was whole; no added time is worked out from a run that wasn't. Those first runs weren't committed.
+- **llama.cpp closes its connection after every stream,** though its headers say keep-alive. oha then counted the next request on that connection as failed: 14 of 30, straight to llama.cpp, in the first try. One request at a time now goes on a new connection each time ([fake server](fake-server.md#how-its-built)).
+
+## Making the numbers
+
+The numbers are made on the machine the owner names, with one command. On that machine:
+
+1. **Get the repository,** and Docker with Compose. Docker 28.0.4 with Compose 2.38.2, and Docker 29.5.2 with Compose 5.5.1, are known to work ([gates](gates.md#in-ci)). In a clone made on Windows before 2026-11-10, run record [0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md)'s four commands first, so the runs say `"dirty": false`.
 2. **Copy `.env.example` to `.env`,** and describe the host in `BENCH_MACHINE`, such as `BENCH_MACHINE="Ryzen 7 7700, 8 cores, 32 GB, Ubuntu 24.04, native Docker"`. Docker can't always see its host.
 3. **Check the backends:** `docker compose run --rm conformance`. It builds every image, and prints how late the machine's timers wake.
-4. **Stop everything else on the machine, then run:** `docker compose run --rm runner`. It takes about 25 minutes, writes 36 files in `runs/`, and ends with the table.
-5. **Commit the new files in `runs/`,** and write the table into this page, under a heading with the date and the machine. On Linux the files belong to root, since the runner's container runs as root; git reads them all the same.
+4. **Stop everything else on the machine, then run:** `docker compose run --rm runner`. It takes about 73 minutes, writes 105 files in `runs/`, and ends with two tables.
+5. **For llama.cpp too:** `docker compose up -d --wait llama-cpp`, which downloads the model the first time, then `docker compose run --rm runner --upstream llama-cpp`: 12 runs, which took 188 s on the Mac.
+6. **Commit the new files in `runs/`,** and write the tables into this page, under a heading with the date and the machine. On Linux the files belong to root, since the runner's container runs as root; git reads them all the same.
 
 Numbers from different machines are never compared ([0008](../spec/decisions/0008-run-anywhere-with-docker-and-record-the-machine.md)). Timing numbers from a machine that runs Docker in a VM, such as a Mac, are for development ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
 

@@ -46,4 +46,4 @@ Don't rewrite a record to change its decision. Write a new record and mark the o
 | [0023](0023-the-fake-upstream-server-go-in-its-own-module-shaped-as-llama-cpps-chunks.md) | The fake upstream server: Go, in its own module, shaped as llama.cpp's chunks, field for field | Accepted | 2026-11-10 |
 | [0024](0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md) | Each backend's upstream client: its plain HTTP client, one pool setting, no retries | Accepted | 2026-11-10 |
 | [0025](0025-llama-cpp-in-compose-qwen3-5-0-8b-four-slots-a-pinned-file.md) | llama.cpp in Compose: Qwen3.5-0.8B, four slots, and a model file pinned by its commit | Accepted | 2026-11-10 |
-| [0026](0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md) | Runs against the local upstreams: the upstream alone as the baseline, a rung at 200, and llama.cpp one request at a time | Proposed | 2026-11-13 |
+| [0026](0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md) | Runs against the local upstreams: the upstream alone as the baseline, a rung at 200, and llama.cpp one request at a time | Accepted | 2026-11-13 |

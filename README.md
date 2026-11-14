@@ -74,7 +74,7 @@ Then check that every backend does the same work, and measure them:
 | Command | What it does | Time |
 |---|---|---|
 | `docker compose run --rm conformance` | Sends every backend the same requests, alone and through the fake server, and checks each answer and each fake's timing: 627 checks | About 3 minutes, once its images are built |
-| `docker compose run --rm runner --passes 1` | Sends each backend the workload at 100, 500, 1,000 and 2,000 requests a second, saves each run in [`runs/`](runs/README.md), and prints a table | About 8 minutes |
+| `docker compose run --rm runner --passes 1` | Sends each backend the workload at five rates, from 100 to 2,000 requests a second, from its own fake and through the fake server; saves each run in [`runs/`](runs/README.md); and prints a table of what each backend added over its upstream | About 25 minutes |
 | `docker compose up -d --wait llama-cpp` | Starts llama.cpp with a small real model, to put behind a backend ([how](docs/llama-cpp.md)) | About 80 s the first time, which downloads 533 MB |
 | `docker compose down` | Stops everything | |
 

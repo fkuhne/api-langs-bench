@@ -1,0 +1,244 @@
+{
+  "schema": 3,
+  "id": "20261113T195555Z-python-fastapi-fake-server-1000rps",
+  "started_at": "2026-11-13T19:55:55Z",
+  "pass": 1,
+  "target": "python-fastapi-fake-server",
+  "backend": {
+    "service": "python-fastapi",
+    "image": "sha256:f6cde19c9ec6085e86d064105306b24a2153c0261cd09c443de80a1a1f4fe62a",
+    "limits": {
+      "cpus": 1.0,
+      "memory_bytes": 536870912
+    }
+  },
+  "upstream": {
+    "name": "fake-server",
+    "image": "sha256:f26ee1dfbd96b97b08ef797c9bb9140f76f673de4193a04ee33317c731e5e570"
+  },
+  "workload": {
+    "name": "stream-20",
+    "method": "POST",
+    "path": "/api/chat/stream",
+    "body": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "In one sentence, what is an LLM?"
+        }
+      ],
+      "parameters": {
+        "max_tokens": 20
+      }
+    },
+    "rate_per_s": 1000,
+    "duration_s": 30,
+    "warmup_s": 5,
+    "connections": 960,
+    "due_ms": 240,
+    "settings": {
+      "LLM_PROVIDER": "fake",
+      "FAKE_ANSWER_TOKENS": "256",
+      "FAKE_REASONING_TOKENS": "0",
+      "FAKE_FIRST_TOKEN_MS": "50",
+      "FAKE_TOKEN_GAP_MS": "10"
+    }
+  },
+  "load_generator": {
+    "name": "oha",
+    "version": "1.16.0",
+    "command": [
+      "/usr/local/bin/oha",
+      "--no-tui",
+      "--output-format",
+      "json",
+      "-z",
+      "30s",
+      "-w",
+      "-q",
+      "1000",
+      "--latency-correction",
+      "-c",
+      "960",
+      "-t",
+      "30s",
+      "-m",
+      "POST",
+      "-T",
+      "application/json",
+      "-d",
+      "{\"messages\": [{\"role\": \"user\", \"content\": \"In one sentence, what is an LLM?\"}], \"parameters\": {\"max_tokens\": 20}}",
+      "http://python-fastapi:8000/api/chat/stream"
+    ]
+  },
+  "repository": {
+    "commit": "9b7cde6a4124e097295d34f00c0054c8d72a9a4b",
+    "dirty": true
+  },
+  "machine": {
+    "description": "Apple M3, 8 cores, 8 GB, macOS 14.3; Docker in Colima's VM (vz)",
+    "docker": {
+      "version": "29.5.2",
+      "os": "Ubuntu 24.04.4 LTS",
+      "kernel": "6.8.0-117-generic",
+      "architecture": "aarch64",
+      "cpus": 4,
+      "memory_bytes": 5142839296
+    },
+    "compose": "5.1.4",
+    "timers": {
+      "sleeps": 200,
+      "gap_ms": 10,
+      "median_late_ms": 2.06,
+      "p99_late_ms": 2.561
+    }
+  },
+  "warmup": {
+    "requests": 5000
+  },
+  "results": {
+    "requests": 30000,
+    "requests_due": 30000,
+    "rate_per_s": 1000.0,
+    "rate_kept": true,
+    "statuses": {
+      "200": 21932
+    },
+    "errors": {
+      "connection closed before message completed": 75,
+      "connection error": 7992,
+      "operation was canceled": 1
+    },
+    "size_bytes": 7308746,
+    "answer_bytes": 872,
+    "complete": false,
+    "latency_ms": {
+      "min": 33.766,
+      "mean": 574.051,
+      "p50": 356.839,
+      "p95": 1614.507,
+      "p99": 2383.534,
+      "max": 4114.064
+    },
+    "first_byte_ms": {
+      "p50": 307.21,
+      "p95": 550.7,
+      "p99": 716.097
+    }
+  },
+  "oha": {
+    "summary": {
+      "successRate": 0.7310666666666666,
+      "total": 30.295265848,
+      "slowest": 4.114064001,
+      "fastest": 0.033765732,
+      "average": 0.5740510172868432,
+      "requestsPerSec": 990.2537297582588,
+      "totalData": 7308746,
+      "sizePerRequest": 333,
+      "sizePerSec": 241250.43287852517
+    },
+    "metrics": {
+      "success_rate": 0.7310666666666666,
+      "requests_per_sec": 990.2537297582588,
+      "latency_ms": {
+        "min": 33.766,
+        "mean": 574.051,
+        "p50": 356.839,
+        "p95": 1614.507,
+        "p99": 2383.534,
+        "max": 4114.064
+      }
+    },
+    "responseTimeHistogram": {
+      "0.033765732": 1,
+      "0.4417955589": 14270,
+      "0.8498253858": 2017,
+      "1.2578552127": 2939,
+      "1.6658850396": 1673,
+      "2.0739148665": 613,
+      "2.4819446934": 296,
+      "2.8899745203": 78,
+      "3.2980043472": 17,
+      "3.7060341741": 10,
+      "4.114064001": 18
+    },
+    "latencyPercentiles": {
+      "p10": 0.077564164,
+      "p25": 0.275448131,
+      "p50": 0.356839418,
+      "p75": 0.960032369,
+      "p90": 1.29696667,
+      "p95": 1.614507436,
+      "p99": 2.383533641,
+      "p99.9": 3.56142749,
+      "p99.99": 4.097290363
+    },
+    "firstByteHistogram": {
+      "0.028177974": 1,
+      "0.3203763287": 11924,
+      "0.6125746834": 9284,
+      "0.9047730381": 560,
+      "1.1969713928": 46,
+      "1.4891697475": 42,
+      "1.7813681022": 20,
+      "2.0735664569": 13,
+      "2.3657648116": 12,
+      "2.6579631663": 17,
+      "2.950161521": 13
+    },
+    "firstBytePercentiles": {
+      "p10": 0.066314728,
+      "p25": 0.200669918,
+      "p50": 0.307210369,
+      "p75": 0.422533791,
+      "p90": 0.496709694,
+      "p95": 0.550699546,
+      "p99": 0.716096612,
+      "p99.9": 2.574172086,
+      "p99.99": 2.9258323170000002
+    },
+    "rps": {
+      "mean": 11727.0294035776,
+      "stddev": 20236.44028245004,
+      "max": 444444.4441630176,
+      "min": 3.5995657469484614,
+      "percentiles": {
+        "p10": 44.558109210500525,
+        "p25": 68.90542695697472,
+        "p50": 938.9901700638965,
+        "p75": 26364.132968050995,
+        "p90": 41699.07409919377,
+        "p95": 44801.52922552839,
+        "p99": 51665.3463302151,
+        "p99.9": 131147.54100919463,
+        "p99.99": 444444.4441630176
+      }
+    },
+    "details": {
+      "DNSDialup": {
+        "average": 0.0002147944773922193,
+        "fastest": 1.6293e-05,
+        "slowest": 0.012279565
+      },
+      "DNSLookup": {
+        "average": 5.679181913774981e-06,
+        "fastest": 1.167e-06,
+        "slowest": 0.000733205
+      },
+      "firstByte": {
+        "average": 0.31239308896890633,
+        "fastest": 0.028177974,
+        "slowest": 2.950161521
+      }
+    },
+    "statusCodeDistribution": {
+      "200": 21932
+    },
+    "errorDistribution": {
+      "connection closed before message completed": 75,
+      "connection error": 7992,
+      "operation was canceled": 1
+    }
+  }
+}

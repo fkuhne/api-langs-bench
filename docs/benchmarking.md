@@ -84,6 +84,7 @@ As summarised by a search on 2026-11-05, from NVIDIA's documentation and the DEV
 - **Open and closed models:** in [k6's closed model](https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/), the default, a virtual user's next iteration starts only when the last one ends. Its arrival-rate executors are open: requests arrive at a set rate, whatever the server does.
 - **wrk2** sends at a constant rate, and its latency includes the time queued.
 - **Vegeta** is open-loop.
+- **oha's time to the first byte** is stamped when the first frame of the response's body arrives, and counts from when the request was sent, not from when it was due: the correction doesn't reach it ([`client.rs` and `result_data.rs` at 1.16.0](https://github.com/hatoo/oha/tree/v1.16.0/src), read on 2026-11-13). When a connection it kept has been closed by the server, it counts the next request as failed.
 - **oha** has a `--latency-correction` flag, which counts a request's latency from when it was due. With too few connections on purpose, its p50 was 3.2 s corrected and 241 ms not. Requests still due when the time ends are never sent, so the rate reached must be checked too ([our run, 2026-11-09](runner.md#the-load-generator-measured-alone)).
 
 - **A client that leaves may not close its connection at once.** Go 1.27.3's HTTP client, when a response's body is closed early, reads on for up to 50 ms or 256 KiB to reuse the connection, then closes it (`maxPostCloseReadTime`, in `net/http/transport.go`). A backend sees the client leave only then: 51 ms late, in our run ([backends](backends.md#go-nethttp)). The load generator that measures a client's leaving (plan step 3.3) must close its connection, such as with keep-alive off.
@@ -105,6 +106,8 @@ From [its README](https://github.com/ggml-org/llama.cpp/blob/master/tools/server
 - **Images:** `ghcr.io/ggml-org/llama.cpp:server`, and `:server-cuda` for NVIDIA.
 - **Its stream is one event for each token,** each about 250 bytes, between a chunk with the role and chunks with the finish reason and the usage; its headers leave with the first token. Captured from the server itself on 2026-11-10 ([fake server](fake-server.md#what-llamacpp-sends)).
 - **At build `b12242`,** given only `--model-url`, the server starts in "router mode" with no model; given a path too, it downloads the file there once. Without a slot count it picked 4 on a VM with 4 CPUs. A reasoning model's thoughts come as `delta.reasoning_content` chunks ([llama.cpp](llama-cpp.md#measured-on-2026-11-10), our runs of 2026-11-10).
+- **It closes its connection after every streamed answer,** though its headers say keep-alive; whole answers share a connection (our run with curl, 2026-11-13, [fake server](fake-server.md#how-its-built)).
+- **v1.0.0 came out on 2026-11-13,** as build `b12359`. Its stream and its whole answer have the same fields, in the same order, as `b12242`'s, which this repository pins (our run, 2026-11-13).
 
 ### Ollama Cloud
 

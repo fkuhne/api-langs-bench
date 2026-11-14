@@ -46,7 +46,8 @@ It then answers on `127.0.0.1:8010`, and on Compose's network at `http://fake-se
 The fake server's are 16 bytes shorter where the fields are the same: its model's name and its build's are `fake-server`, against `/models/stories260K.gguf` and `b12242-3b4d6ab3f`. Its usage is shorter because its timings are round numbers.
 
 **What it doesn't imitate:**
-- **llama.cpp's `Keep-Alive: timeout=5, max=100`,** which closes a connection idle for 5 s, or used 100 times. Go's server keeps a connection open.
+- **llama.cpp closes its connection after every streamed answer,** though its headers say `Keep-Alive: timeout=5, max=100`. Two streams sent on one connection with curl went out on two; two whole answers shared one (our run, 2026-11-13). The fake server keeps the connection open after a stream, as Go's server does. So through the fake server a backend reuses its connections, and through llama.cpp it opens one for each stream. Which of the two the benchmark should show is an open question, in [0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md).
+- **llama.cpp's limits on a connection it keeps:** closed when idle for 5 s, or after 100 requests.
 - **`Connection: close` after an error.** llama.cpp closes the connection it refused a request on.
 - **llama.cpp's slots,** four in the capture: the fake server answers any number of requests at once.
 - **Its other routes,** such as `/v1/models`.

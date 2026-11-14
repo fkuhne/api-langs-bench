@@ -1,0 +1,244 @@
+{
+  "schema": 3,
+  "id": "20261113T195638Z-python-fastapi-fake-server-2000rps",
+  "started_at": "2026-11-13T19:56:38Z",
+  "pass": 1,
+  "target": "python-fastapi-fake-server",
+  "backend": {
+    "service": "python-fastapi",
+    "image": "sha256:f6cde19c9ec6085e86d064105306b24a2153c0261cd09c443de80a1a1f4fe62a",
+    "limits": {
+      "cpus": 1.0,
+      "memory_bytes": 536870912
+    }
+  },
+  "upstream": {
+    "name": "fake-server",
+    "image": "sha256:f26ee1dfbd96b97b08ef797c9bb9140f76f673de4193a04ee33317c731e5e570"
+  },
+  "workload": {
+    "name": "stream-20",
+    "method": "POST",
+    "path": "/api/chat/stream",
+    "body": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "In one sentence, what is an LLM?"
+        }
+      ],
+      "parameters": {
+        "max_tokens": 20
+      }
+    },
+    "rate_per_s": 2000,
+    "duration_s": 30,
+    "warmup_s": 5,
+    "connections": 1920,
+    "due_ms": 240,
+    "settings": {
+      "LLM_PROVIDER": "fake",
+      "FAKE_ANSWER_TOKENS": "256",
+      "FAKE_REASONING_TOKENS": "0",
+      "FAKE_FIRST_TOKEN_MS": "50",
+      "FAKE_TOKEN_GAP_MS": "10"
+    }
+  },
+  "load_generator": {
+    "name": "oha",
+    "version": "1.16.0",
+    "command": [
+      "/usr/local/bin/oha",
+      "--no-tui",
+      "--output-format",
+      "json",
+      "-z",
+      "30s",
+      "-w",
+      "-q",
+      "2000",
+      "--latency-correction",
+      "-c",
+      "1920",
+      "-t",
+      "30s",
+      "-m",
+      "POST",
+      "-T",
+      "application/json",
+      "-d",
+      "{\"messages\": [{\"role\": \"user\", \"content\": \"In one sentence, what is an LLM?\"}], \"parameters\": {\"max_tokens\": 20}}",
+      "http://python-fastapi:8000/api/chat/stream"
+    ]
+  },
+  "repository": {
+    "commit": "9b7cde6a4124e097295d34f00c0054c8d72a9a4b",
+    "dirty": true
+  },
+  "machine": {
+    "description": "Apple M3, 8 cores, 8 GB, macOS 14.3; Docker in Colima's VM (vz)",
+    "docker": {
+      "version": "29.5.2",
+      "os": "Ubuntu 24.04.4 LTS",
+      "kernel": "6.8.0-117-generic",
+      "architecture": "aarch64",
+      "cpus": 4,
+      "memory_bytes": 5142839296
+    },
+    "compose": "5.1.4",
+    "timers": {
+      "sleeps": 200,
+      "gap_ms": 10,
+      "median_late_ms": 2.083,
+      "p99_late_ms": 2.591
+    }
+  },
+  "warmup": {
+    "requests": 10000
+  },
+  "results": {
+    "requests": 54064,
+    "requests_due": 60000,
+    "rate_per_s": 1802.1333333333334,
+    "rate_kept": false,
+    "statuses": {
+      "200": 31822
+    },
+    "errors": {
+      "connection closed before message completed": 1959,
+      "connection error": 20235,
+      "operation was canceled": 48
+    },
+    "size_bytes": 5571517,
+    "answer_bytes": 872,
+    "complete": false,
+    "latency_ms": {
+      "min": 0.477,
+      "mean": 1218.371,
+      "p50": 920.187,
+      "p95": 3397.917,
+      "p99": 4721.607,
+      "max": 14473.102
+    },
+    "first_byte_ms": {
+      "p50": 617.767,
+      "p95": 761.102,
+      "p99": 1291.06
+    }
+  },
+  "oha": {
+    "summary": {
+      "successRate": 0.5885986978395975,
+      "total": 31.747888151,
+      "slowest": 14.473102304,
+      "fastest": 0.000476526,
+      "average": 1.218370579331221,
+      "requestsPerSec": 1702.9164189712278,
+      "totalData": 5571517,
+      "sizePerRequest": 175,
+      "sizePerSec": 175492.52326644937
+    },
+    "metrics": {
+      "success_rate": 0.5885986978395975,
+      "requests_per_sec": 1702.9164189712278,
+      "latency_ms": {
+        "min": 0.477,
+        "mean": 1218.371,
+        "p50": 920.187,
+        "p95": 3397.917,
+        "p99": 4721.607,
+        "max": 14473.102
+      }
+    },
+    "responseTimeHistogram": {
+      "0.000476526": 1,
+      "1.4477391037999998": 20370,
+      "10.131314570599999": 0,
+      "11.578577148399999": 0,
+      "13.0258397262": 0,
+      "14.473102304": 11,
+      "2.8950016815999997": 7372,
+      "4.342264259399999": 3479,
+      "5.7895268371999995": 589,
+      "7.236789415": 0,
+      "8.684051992799999": 0
+    },
+    "latencyPercentiles": {
+      "p10": 0.001317906,
+      "p25": 0.01245989,
+      "p50": 0.920187433,
+      "p75": 2.170112152,
+      "p90": 3.091742934,
+      "p95": 3.397916766,
+      "p99": 4.721606679,
+      "p99.9": 4.756025468,
+      "p99.99": 14.47017302
+    },
+    "firstByteHistogram": {
+      "0.000448191": 1,
+      "1.4181484398": 31645,
+      "11.3420501814": 0,
+      "12.759750430199999": 0,
+      "14.177450679": 11,
+      "2.8358486885999996": 150,
+      "4.2535489374": 15,
+      "5.6712491862": 0,
+      "7.088949435": 0,
+      "8.5066496838": 0,
+      "9.9243499326": 0
+    },
+    "firstBytePercentiles": {
+      "p10": 0.001205232,
+      "p25": 0.010797297,
+      "p50": 0.617766612,
+      "p75": 0.696640901,
+      "p90": 0.726815601,
+      "p95": 0.761101877,
+      "p99": 1.291059555,
+      "p99.9": 2.70583923,
+      "p99.99": 14.174891623
+    },
+    "rps": {
+      "mean": 4032.710648383522,
+      "stddev": 10272.898092675025,
+      "max": 94108.78976182676,
+      "min": 3.3006402714024095,
+      "percentiles": {
+        "p10": 67.05961814643805,
+        "p25": 314.346721499914,
+        "p50": 1325.7535583223848,
+        "p75": 2043.7504455678982,
+        "p90": 3740.6844059366995,
+        "p95": 35659.26855704843,
+        "p99": 47888.13332079994,
+        "p99.9": 76796.06804106082,
+        "p99.99": 94108.78976182676
+      }
+    },
+    "details": {
+      "DNSDialup": {
+        "average": 0.00010915964027370473,
+        "fastest": 1.3418e-05,
+        "slowest": 0.005227367
+      },
+      "DNSLookup": {
+        "average": 3.7512737047898327e-06,
+        "fastest": 1e-06,
+        "slowest": 0.000154717
+      },
+      "firstByte": {
+        "average": 0.43087962910511785,
+        "fastest": 0.000448191,
+        "slowest": 14.177450679
+      }
+    },
+    "statusCodeDistribution": {
+      "200": 31822
+    },
+    "errorDistribution": {
+      "connection closed before message completed": 1959,
+      "connection error": 20235,
+      "operation was canceled": 48
+    }
+  }
+}
