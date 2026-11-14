@@ -64,6 +64,11 @@ class Streamed:
     headers_at: int
 
 
+# How long a backend waits for its upstream in the suite, in seconds: short, so a check of the
+# fake server's silence doesn't take long.
+SUITE_TIMEOUT_S = 1
+
+
 class Backend:
     """One backend's service, answering from one upstream: the fake inside it, or the fake
     server. It's restarted only when a check needs other settings."""
@@ -83,7 +88,8 @@ class Backend:
 
     def environment(self, settings: FakeSettings) -> dict[str, str]:
         """The backend's settings: the fake's, and its upstream's."""
-        return settings.environment() | upstream_settings(self.upstream)
+        timeout = {"LLM_TIMEOUT_SECONDS": str(SUITE_TIMEOUT_S)}
+        return settings.environment() | upstream_settings(self.upstream) | timeout
 
     def serve(self, settings: FakeSettings) -> Served:
         """The backend, running with `settings`. Behind the fake server, that runs with them

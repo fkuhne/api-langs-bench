@@ -20,19 +20,17 @@ UPSTREAMS = (IN_PROCESS, FAKE_SERVER)
 LLAMA_CPP = "llama-cpp"
 # The model each one's answers name.
 MODELS = {IN_PROCESS: "fake", FAKE_SERVER: "fake-server"}
-# How long a backend waits for the fake server in the conformance suite, in seconds: short, so
-# a check of the upstream's silence doesn't take long.
-SUITE_TIMEOUT_S = 1
-# How long a backend waits for llama.cpp in the suite: a real model on a CPU is slow.
-LLAMA_TIMEOUT_S = 60
+# The port an upstream listens on, in its own container: llama.cpp's.
+UPSTREAM_PORT = 8080
+
+
+def upstream_url(upstream: str, path: str = "") -> str:
+    """Where `upstream` answers `path`, on Compose's network."""
+    return f"http://{upstream}:{UPSTREAM_PORT}{path}"
 
 
 def upstream_settings(upstream: str) -> dict[str, str]:
     """The settings that make a backend answer from `upstream`."""
     if upstream == IN_PROCESS:
         return {"LLM_PROVIDER": "fake"}
-    return {
-        "LLM_PROVIDER": "openai-compatible",
-        "LLM_BASE_URL": f"http://{upstream}:8080/v1",
-        "LLM_TIMEOUT_SECONDS": str(LLAMA_TIMEOUT_S if upstream == LLAMA_CPP else SUITE_TIMEOUT_S),
-    }
+    return {"LLM_PROVIDER": "openai-compatible", "LLM_BASE_URL": upstream_url(upstream, "/v1")}

@@ -22,6 +22,8 @@ pytestmark = pytest.mark.llama_cpp
 QUESTION = [{"role": "user", "content": "In one sentence, what is an LLM?"}]
 # Few tokens, so each answer is quick, and cut short.
 TOKENS = 8
+# How long a backend waits for llama.cpp here, in seconds: a real model on a CPU is slow.
+TIMEOUT_S = "60"
 
 
 @pytest.fixture(scope="module", params=BACKENDS)
@@ -30,7 +32,7 @@ def through_llama(request: pytest.FixtureRequest, compose: Compose) -> Iterator[
     in its volume."""
     service = request.param
     compose.start(LLAMA_CPP, {})
-    compose.start(service, upstream_settings(LLAMA_CPP))
+    compose.start(service, upstream_settings(LLAMA_CPP) | {"LLM_TIMEOUT_SECONDS": TIMEOUT_S})
     with httpx2.Client(base_url=url(service), timeout=120) as client:
         yield client
     # Left running with the settings `.env` gives, as Compose started it.
