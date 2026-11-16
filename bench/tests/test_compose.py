@@ -55,15 +55,25 @@ def test_a_fresh_start_makes_the_container_again() -> None:
 
 
 def test_limits_are_what_docker_holds_the_container_to() -> None:
-    docker = Docker((0, "f198ed0e450c\n", ""), (0, "1000000000 536870912\n", ""))
+    docker = Docker((0, "f198ed0e450c\n", ""), (0, "1000000000 536870912 2,3\n", ""))
 
-    assert compose(docker).limits("go-gin") == {"cpus": 1.0, "memory_bytes": 536870912}
+    assert compose(docker).limits("go-gin") == {
+        "cpus": 1.0,
+        "memory_bytes": 536870912,
+        "cpuset": "2,3",
+    }
     assert docker.calls[0][0] == [*BASE, "ps", "--quiet", "go-gin"]
     assert docker.calls[1][0] == [
         *(DOCKER, "inspect", "--format"),
-        "{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}}",
+        "{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}} {{.HostConfig.CpusetCpus}}",
         "f198ed0e450c",
     ]
+
+
+def test_a_container_on_any_core_has_no_cpuset() -> None:
+    docker = Docker((0, "f198ed0e450c\n", ""), (0, "0 0 \n", ""))
+
+    assert compose(docker).limits("fake-server") == {"cpus": 0, "memory_bytes": 0, "cpuset": None}
 
 
 def test_limits_fail_without_exactly_one_running_container() -> None:

@@ -115,15 +115,20 @@ class Compose:
             raise ComposeError(f"{service} has {len(images)} containers, not one")
         return str(images[0]["ID"])
 
-    def limits(self, service: str) -> dict[str, float | int]:
-        """The CPU and memory limits Docker holds `service`'s one container to; 0 for none."""
+    def limits(self, service: str) -> dict[str, float | int | str | None]:
+        """The CPU and memory limits Docker holds `service`'s one container to, 0 for none; and
+        the cores it may run on, None when it isn't pinned (spec/decisions/0027)."""
         containers = self._output("ps", "--quiet", service).split()
         if len(containers) != 1:
             raise ComposeError(f"{service} has {len(containers)} containers running, not one")
-        template = "{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}}"
+        template = "{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}} {{.HostConfig.CpusetCpus}}"
         inspected = self._capture([DOCKER, "inspect", "--format", template, *containers])
-        nano_cpus, memory = inspected.split()
-        return {"cpus": int(nano_cpus) / 1e9, "memory_bytes": int(memory)}
+        nano_cpus, memory, *cpuset = inspected.split()
+        return {
+            "cpus": int(nano_cpus) / 1e9,
+            "memory_bytes": int(memory),
+            "cpuset": cpuset[0] if cpuset else None,
+        }
 
     def version(self) -> str:
         """This Compose's version."""

@@ -27,13 +27,18 @@ A run is one workload sent to one target at one rate, once. The target is a back
 4. asks for one answer, and keeps its size in bytes, to tell a whole answer from a cut one;
 5. sends the workload for 5 s, as a warm-up that isn't counted;
 6. sends it for 30 s, and keeps what the load generator measured;
-7. reads the backend's limits back from Docker, and writes the run's file.
+7. reads the backend's and the upstream's limits and cores back from Docker, and the load generator's cores from its own process, and writes the run's file.
 
 **The passes.** A pass runs every target at every rate, lowest first, one upstream after the other. The targets' order rotates from one pass to the next, so none always runs first. At the end, the runner prints a Markdown table for each upstream: each number's median over the passes, and its range.
 
 **The upstream alone.** Through the fake server or llama.cpp, each pass also sends the same load straight to the upstream, with no backend: the request a backend's own client sends it. That run is what the backends are compared with. **The time a backend adds** is its median less the upstream's own, in the same pass and at the same rate ([0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)). The fake server's own lateness and the load generator's are in both runs, so they cancel out.
 
-**The limits,** provisional until plan step 3.1: every backend's container gets 1 CPU and 512 MiB, from `BACKEND_CPUS` and `BACKEND_MEMORY` in `.env`. Under a 1-CPU limit, Go 1.27.3 sets `GOMAXPROCS` to 2, its minimum, against 4 without one (our run, 2026-11-10). The load generator has no limit, and shares the machine's other CPUs.
+**The limits** ([0027](../spec/decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)):
+- **Every backend's container gets 1 CPU of time and 512 MiB,** from `BACKEND_CPUS` and `BACKEND_MEMORY` in `.env`. Under a 1-CPU limit, Go 1.27.3 sets `GOMAXPROCS` to 2, its minimum, against 4 without one (our run, 2026-11-10).
+- **Cores of their own, when the machine names them.** `BACKEND_CPUSET` pins every backend to its cores, such as `2,3`. `HELPER_CPUSET` pins everything else that runs during a measurement to others, such as `0,1`: the runner and its load generator, the conformance suite, the fake server and llama.cpp. Both are empty by default, and then nothing is pinned.
+- **The helpers have no other limit.**
+- **Under Docker Desktop,** the cores are its VM's, not the machine's, so pinning guarantees less there.
+- **How each backend runs inside its limits** is in [the backends' notes](backends.md#the-rule-they-all-follow).
 
 At the end, every backend is left running with the settings `.env` gives. Like the conformance suite, the runner starts the backends through Docker's socket, which gives its container root on Docker's host.
 
@@ -57,13 +62,13 @@ At the end, every backend is left running with the settings `.env` gives. Like t
 
 | Field | What |
 |---|---|
-| `schema` | 3. Runs made before 2026-11-13 are 2: no upstream in their names, and `upstream` as a word. The first three, of plan step 1.6, are 1: no limits, no pass, and no rate in their names |
+| `schema` | 4. Runs made before plan step 3.1, on 2026-11-16, are 3: without the cores. Runs made before 2026-11-13 are 2: no upstream in their names, and `upstream` as a word. The first three, of plan step 1.6, are 1: no limits, no pass, and no rate in their names |
 | `pass` | Which pass the run belongs to |
 | `target` | What the load was sent to, as in the file's name |
-| `backend` | The Compose service, its image's ID, and its limits as Docker holds it to them: CPUs and bytes of memory, 0 for none. Null when the load went straight to the upstream |
-| `upstream` | Its name, `fake`, `fake-server` or `llama-cpp`, and its image's ID. The in-process fake has none: it's part of the backend |
+| `backend` | The Compose service, its image's ID, and its limits as Docker holds it to them: CPUs and bytes of memory, 0 for none, and its cores, null when it isn't pinned. Null when the load went straight to the upstream |
+| `upstream` | Its name, `fake`, `fake-server` or `llama-cpp`, its image's ID, and its limits, as for the backend. The in-process fake has neither: it's part of the backend |
 | `workload` | The request, the rate, the durations, the connections, and the fake's settings; or, one at a time, the count of requests |
-| `load_generator` | oha's version, and its whole command |
+| `load_generator` | oha's version, its whole command, and the cores it could run on, from the runner's own process |
 | `repository` | The commit, and `dirty`: whether a tracked file differed from it |
 | `machine` | Your description of the host, from `BENCH_MACHINE` in `.env`; Docker's version, OS, kernel, architecture, CPUs and memory; Compose's version; and the timer probe's median and p99 |
 | `results` | The requests sent and due, the rate reached, whether the load was kept (99% of the requests due were sent), the counts by status and by error, the bytes of every answer together, one whole answer's bytes, whether every answer was whole, the latency's p50, p95 and p99, and the time to the first byte |
@@ -302,7 +307,7 @@ What building it taught:
 The numbers are made on the machine the owner names, with one command. On that machine:
 
 1. **Get the repository,** and Docker with Compose. Docker 28.0.4 with Compose 2.38.2, and Docker 29.5.2 with Compose 5.5.1, are known to work ([gates](gates.md#in-ci)). In a clone made on Windows before 2026-11-10, run record [0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md)'s four commands first, so the runs say `"dirty": false`.
-2. **Copy `.env.example` to `.env`,** and describe the host in `BENCH_MACHINE`, such as `BENCH_MACHINE="Ryzen 7 7700, 8 cores, 32 GB, Ubuntu 24.04, native Docker"`. Docker can't always see its host.
+2. **Copy `.env.example` to `.env`,** and describe the host in `BENCH_MACHINE`, such as `BENCH_MACHINE="Ryzen 7 7700, 8 cores, 32 GB, Ubuntu 24.04, native Docker"`. Docker can't always see its host. On a machine with cores to spare, also give the backends and the helpers cores that don't overlap, such as `BACKEND_CPUSET=2,3` and `HELPER_CPUSET=0,1` ([the limits](#what-a-run-is)). On a CPU with fast and slow cores, the backends get fast ones.
 3. **Check the backends:** `docker compose run --rm conformance`. It builds every image, and prints how late the machine's timers wake.
 4. **Stop everything else on the machine, then run:** `docker compose run --rm runner`. It takes about 73 minutes, writes 105 files in `runs/`, and ends with two tables.
 5. **For llama.cpp too:** `docker compose up -d --wait llama-cpp`, which downloads the model the first time, then `docker compose run --rm runner --upstream llama-cpp`: 12 runs, which took 188 s on the Mac.

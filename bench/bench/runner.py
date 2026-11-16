@@ -34,8 +34,9 @@ from bench.workload import LLAMA_20, RATES, STREAM_20, Load, Workload
 
 # Where the runner's service mounts the repository's `runs/`.
 RUNS_DIR = Path("/runs")
-# The version of a run's file. It changes when a field's meaning does. 3 names the upstream.
-SCHEMA = 3
+# The version of a run's file. It changes when a field's meaning does. 3 names the upstream; 4 adds
+# the cores (spec/decisions/0027).
+SCHEMA = 4
 # How many times every backend is run at every rate, unless `--passes` says.
 PASSES = 3
 # The owner's description of the host, which Docker can't see from inside a VM.
@@ -108,6 +109,8 @@ class Runner:
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
     probe: Callable[[], list[float]] = probe
     repository: Callable[[], dict[str, Any]] = lambda: repository.describe(PROJECT_DIR)
+    # The cores this process, and so the load generator it starts, may run on.
+    cores: Callable[[], list[int]] = lambda: sorted(os.sched_getaffinity(0))
 
     def run(self, target: Target, workload: Load, run_pass: int = 1) -> Path:
         """One run: `workload` against `target`, no other backend running. The backend and the
@@ -145,21 +148,26 @@ class Runner:
             and {
                 "service": target.backend,
                 "image": self.compose.image(target.backend),
-                # As Docker holds the container to them; 0 is no limit (R5).
+                # As Docker holds the container to them: 0 is no limit, and a None cpuset any core
+                # (R5).
                 "limits": self.compose.limits(target.backend),
             },
             "upstream": {
                 "name": target.upstream,
-                # The in-process fake is part of the backend's own image.
+                # The in-process fake is part of the backend's own image, and its limits.
                 "image": None
                 if target.upstream == IN_PROCESS
                 else self.compose.image(target.upstream),
+                "limits": None
+                if target.upstream == IN_PROCESS
+                else self.compose.limits(target.upstream),
             },
             "workload": sent.described(),
             "load_generator": {
                 "name": "oha",
                 "version": self.load([oha.OHA, "--version"], GRACE_S).strip().removeprefix("oha "),
                 "command": command,
+                "cores": self.cores(),
             },
             "repository": self.repository(),
             "machine": {

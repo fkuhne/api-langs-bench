@@ -6,8 +6,10 @@
 
 name: api-langs-bench
 
-# Each backend's limits, the same for every backend, provisional until plan step 3.1
-# (spec/decisions/0020). They're repeated in each backend's service: `cpus` and `mem_limit`.
+# Each backend's limits, the same for every backend (spec/decisions/0027): 1 CPU of time and
+# 512 MiB, on BACKEND_CPUSET's cores when it names some. Everything else that runs during a
+# measurement, the helpers, runs on HELPER_CPUSET's. Empty, the default, pins nothing. They're
+# repeated in each service: `cpus`, `mem_limit` and `cpuset`.
 
 # The contract's settings, the same for every backend (contract/README.md#settings).
 x-backend-environment: &backend-environment
@@ -33,6 +35,7 @@ services:
     environment: *backend-environment
     cpus: ${BACKEND_CPUS:-1}
     mem_limit: ${BACKEND_MEMORY:-512m}
+    cpuset: ${BACKEND_CPUSET:-}
     ports:
       - 127.0.0.1:${PYTHON_FASTAPI_PORT:-8001}:8000
     healthcheck:
@@ -59,6 +62,7 @@ services:
     environment: *backend-environment
     cpus: ${BACKEND_CPUS:-1}
     mem_limit: ${BACKEND_MEMORY:-512m}
+    cpuset: ${BACKEND_CPUSET:-}
     ports:
       - 127.0.0.1:${GO_NETHTTP_PORT:-8002}:8000
     # The image has no shell, so the server asks itself (spec/decisions/0016).
@@ -85,6 +89,7 @@ services:
     environment: *backend-environment
     cpus: ${BACKEND_CPUS:-1}
     mem_limit: ${BACKEND_MEMORY:-512m}
+    cpuset: ${BACKEND_CPUSET:-}
     ports:
       - 127.0.0.1:${GO_GIN_PORT:-8003}:8000
     healthcheck:
@@ -99,7 +104,7 @@ services:
       retries: 3
 
   # The fake upstream server, shaped like llama.cpp's (spec/decisions/0023):
-  # docker compose up -d --wait fake-server. A helper, so it has no limits.
+  # docker compose up -d --wait fake-server. A helper: no limits, on the helpers' cores.
   fake-server:
     build:
       context: fake-server
@@ -111,6 +116,7 @@ services:
       FAKE_REASONING_TOKENS: ${FAKE_REASONING_TOKENS:-0}
       FAKE_FIRST_TOKEN_MS: ${FAKE_FIRST_TOKEN_MS:-0}
       FAKE_TOKEN_GAP_MS: ${FAKE_TOKEN_GAP_MS:-0}
+    cpuset: ${HELPER_CPUSET:-}
     ports:
       - 127.0.0.1:${FAKE_SERVER_PORT:-8010}:8080
     # The image has no shell, so the server asks itself.
@@ -127,10 +133,11 @@ services:
 
   # llama.cpp's server, with one small model on CPU (spec/decisions/0025). In a profile, so it
   # starts only when named: docker compose up -d --wait llama-cpp. The first start downloads the
-  # model, 533 MB, into the llama-models volume. A helper, so it has no limits.
+  # model, 533 MB, into the llama-models volume. A helper: no limits, on the helpers' cores.
   llama-cpp:
     image: ghcr.io/ggml-org/llama.cpp:server-b12242@sha256:4d2de15a0ffbce704777c64026b40512a71e0bbc0b303a5fe5ea9bf71760dff9
     profiles: [llm]
+    cpuset: ${HELPER_CPUSET:-}
     command:
       # The file at that URL, downloaded to that path once, then loaded from there.
       - --model
@@ -285,6 +292,7 @@ services:
       additional_contexts:
         contract: contract
     profiles: [tools]
+    cpuset: ${HELPER_CPUSET:-}
     depends_on:
       python-fastapi:
         condition: service_healthy
@@ -314,6 +322,8 @@ services:
       LLAMA_CONTEXT_SIZE: ${LLAMA_CONTEXT_SIZE:-8192}
       BACKEND_CPUS: ${BACKEND_CPUS:-1}
       BACKEND_MEMORY: ${BACKEND_MEMORY:-512m}
+      BACKEND_CPUSET: ${BACKEND_CPUSET:-}
+      HELPER_CPUSET: ${HELPER_CPUSET:-}
 
   # The runner: docker compose run --rm runner
   # `--backend go-gin`, `--rate 100` and `--passes 1` may follow. It sends one workload, at a
@@ -328,6 +338,7 @@ services:
       additional_contexts:
         contract: contract
     profiles: [tools]
+    cpuset: ${HELPER_CPUSET:-}
     depends_on:
       python-fastapi:
         condition: service_healthy
@@ -351,6 +362,8 @@ services:
       FAKE_SERVER_PORT: ${FAKE_SERVER_PORT:-8010}
       BACKEND_CPUS: ${BACKEND_CPUS:-1}
       BACKEND_MEMORY: ${BACKEND_MEMORY:-512m}
+      BACKEND_CPUSET: ${BACKEND_CPUSET:-}
+      HELPER_CPUSET: ${HELPER_CPUSET:-}
       BENCH_MACHINE: ${BENCH_MACHINE:-}
     # One open file for each connection: the default, 1,024, fails requests at the higher rates
     # (spec/decisions/0020).

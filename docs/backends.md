@@ -208,7 +208,7 @@ Each backend runs in its ecosystem's documented production set-up, with one rule
 | **One process per CPU of the limit:** one, for 1 CPU | One uvicorn process. [FastAPI's container guide](https://fastapi.tiangolo.com/deployment/docker/) advises "a single Uvicorn process per container"; uvicorn would take more from `WEB_CONCURRENCY` | One process. `GOMAXPROCS` is Go's default: the least of the CPUs, the affinity mask and the CPU quota, rounded up, never below 2 ([Go's `runtime`](https://pkg.go.dev/runtime)). Under 1 CPU of time, 2 | As `net/http` |
 | **No log line per request** | `--no-access-log` | Writes none | `gin.New()` with `gin.Recovery()`, not `gin.Default()`, whose logger writes one even in release mode |
 | **Release mode** | uvicorn has none | Has none | `GIN_MODE=release` |
-| **Limits** | 1 CPU of time and 512 MiB ([runner](runner.md#what-a-run-is)) | The same | The same |
+| **Limits** | 1 CPU of time and 512 MiB, on cores of its own when the machine names them ([runner](runner.md#what-a-run-is)) | The same | The same |
 
 - **Nothing else is tuned:** no setting for the garbage collector, buffers or threads that the documentation doesn't name for production.
 - **Warnings and errors are still logged,** to stdout.

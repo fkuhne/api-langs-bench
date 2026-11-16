@@ -41,9 +41,11 @@ class Docker:
         self.calls.append((list(command), dict(environment)))
         out = ""
         if "inspect" in command:
-            out = "1000000000 536870912\n"
+            # The backends on their cores, with their limits; the helpers on theirs, without.
+            helper = command[-1].startswith(("fake-server", "llama-cpp"))
+            out = "0 0 0,1\n" if helper else "1000000000 536870912 2,3\n"
         elif "--quiet" in command:
-            out = "f198ed0e450c\n"
+            out = f"{command[-1]}-f198ed0e450c\n"
         elif "images" in command:
             out = json.dumps([{"ID": "sha256:0b89"}])
         elif "info" in command:
@@ -89,6 +91,7 @@ def runner(docker: Docker, load: Oha, tmp_path: Path) -> Runner:
         now=lambda: datetime(2026, 11, 9, 21, 30, 5, tzinfo=UTC),
         probe=lambda: [1.0, 2.0, 3.0],
         repository=lambda: {"commit": "0ed94a9", "dirty": False},
+        cores=lambda: [0, 1],
     )
 
 
@@ -147,7 +150,11 @@ def test_the_upstream_alone_gets_the_load_a_backend_would_send_it(
     record = json.loads(path.read_text())
     assert path.name == "20261109T213005Z-fake-server-alone-500rps.json"
     assert (record["target"], record["backend"]) == ("fake-server-alone", None)
-    assert record["upstream"] == {"name": "fake-server", "image": "sha256:0b89"}
+    assert record["upstream"] == {
+        "name": "fake-server",
+        "image": "sha256:0b89",
+        "limits": {"cpus": 0, "memory_bytes": 0, "cpuset": "0,1"},
+    }
     assert record["workload"] == alone.described()
 
 
@@ -202,7 +209,7 @@ def test_a_runs_file_says_what_ran_where_and_what_was_measured(runner: Runner) -
     assert path.name == "20261109T213005Z-go-gin-fake-100rps.json"
     assert record.pop("oha") == OUTPUT
     assert record == {
-        "schema": 3,
+        "schema": 4,
         "id": "20261109T213005Z-go-gin-fake-100rps",
         "started_at": "2026-11-09T21:30:05Z",
         "pass": 2,
@@ -210,14 +217,15 @@ def test_a_runs_file_says_what_ran_where_and_what_was_measured(runner: Runner) -
         "backend": {
             "service": "go-gin",
             "image": "sha256:0b89",
-            "limits": {"cpus": 1.0, "memory_bytes": 536870912},
+            "limits": {"cpus": 1.0, "memory_bytes": 536870912, "cpuset": "2,3"},
         },
-        "upstream": {"name": "fake", "image": None},
+        "upstream": {"name": "fake", "image": None, "limits": None},
         "workload": STREAM_20.described(),
         "load_generator": {
             "name": "oha",
             "version": "1.16.0",
             "command": oha.command(STREAM_20, "http://go-gin:8000/api/chat/stream"),
+            "cores": [0, 1],
         },
         "repository": {"commit": "0ed94a9", "dirty": False},
         "machine": {
