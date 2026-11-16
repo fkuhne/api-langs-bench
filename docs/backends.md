@@ -307,6 +307,8 @@ Built in plan step 2.2 ([0024](../spec/decisions/0024-each-backends-upstream-cli
 - **The fake server stayed far from its own ceiling,** at 62% of a CPU or less.
 - **CPU doesn't grow in step with the rate on this VM:** Go's was 31% at 100 a second and 83% at 1,000. An idle virtual CPU costs more to wake ([below](#where-the-delay-comes-from)).
 
+## Timers in Docker's VM on this Mac
+
 In a bare `python:3.14.8-slim-trixie` container, with no backend involved, each sleep of 20 ms, 200 times, wakes this much later than asked:
 
 | Sleep | Median | p90 | p99 | Max |
