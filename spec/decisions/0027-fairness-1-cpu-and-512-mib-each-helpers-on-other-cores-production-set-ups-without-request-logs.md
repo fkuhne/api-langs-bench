@@ -1,6 +1,6 @@
 # 0027. Fairness: 1 CPU and 512 MiB each, the helpers on other cores, and production set-ups without request logs
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-16
 
 ## Context
@@ -79,6 +79,12 @@ Every backend runs with 1 CPU of time and 512 MiB, on cores of its own when the 
 - [ ] Compose 2.38.2, the one in CI, accepts an empty `cpuset`. To check in CI, in this step.
 - [ ] 512 MiB binds no backend at these rates, as [0020](0020-the-first-numbers-a-ladder-of-rates-under-provisional-limits-three-passes.md) assumes. Plan step 3.4.
 
+## Learned while building it
+
+- **The conformance suite can hold every backend to the log rule,** future languages included: four requests, whole and streamed, must write no line to the backend's log. Against the images built before this record, it caught uvicorn's access log and Gin's `[GIN]` lines ([conformance](../../docs/conformance.md#what-it-checks)).
+- **An empty `cpuset` leaves a container unpinned,** in Compose 5.5.1 and in 5.1.4, inside the runner's image (our runs). So one Compose file serves both a machine that names its cores and one that doesn't.
+- **Two cores carried the helpers at 2,000 a second on the Mac:** the fake server alone, sharing them with the load generator, had a p50 of 241.3 ms and a p99 of 256.1 ms ([runner](../../docs/runner.md#a-check-of-the-cores-on-2026-11-16)).
+
 ## Sources
 
 - [FastAPI in Containers - Docker](https://fastapi.tiangolo.com/deployment/docker/), read on 2026-11-16: "One Process per Container" and "Containers with Multiple Processes and Special Cases".
@@ -89,3 +95,4 @@ Every backend runs with 1 CPU of time and 512 MiB, on cores of its own when the 
 - Our runs on the Mac, 2026-11-16: Compose and `cpuset`, and the sketches ([backends](../../docs/backends.md#fairness-sketches-on-2026-11-16)).
 - The owner's runs of 2026-11-16 ([runner](../../docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)).
 - The owner's picks, 2026-11-16.
+- The check's 14 runs on the Mac, 2026-11-16 ([runner](../../docs/runner.md#a-check-of-the-cores-on-2026-11-16)).

@@ -302,6 +302,47 @@ What building it taught:
 - **A 200 isn't always an answer.** In the first check of this runner, Python through the fake server at 2,000 a second had a p50 of 1.9 ms, and an "added" time of -239 ms. Its streams answered 200 at once, then ended with an `error` event when its upstream client couldn't keep up. So each run now keeps one whole answer's size, and says whether every answer was whole; no added time is worked out from a run that wasn't. Those first runs weren't committed.
 - **llama.cpp closes its connection after every stream,** though its headers say keep-alive. oha then counted the next request on that connection as failed: 14 of 30, straight to llama.cpp, in the first try. One request at a time now goes on a new connection each time ([fake server](fake-server.md#how-its-built)).
 
+## A check of the cores, on 2026-11-16
+
+Plan step 3.1's cores, checked on the development Mac named above, with the host busy ([0027](../spec/decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)). The timer probe read 2.0 to 3.3 ms late at the median, and 3.7 to 10.4 ms at the p99. One pass at 100 and 2,000 a second, from a POSIX shell:
+
+```text
+BACKEND_CPUSET=2,3 HELPER_CPUSET=0,1 docker compose run --rm runner --passes 1 --rate 100 --rate 2000
+```
+
+14 runs in about 10 minutes, `runs/20261116T180057Z-python-fastapi-fake-100rps.json` to `runs/20261116T180956Z-fake-server-alone-2000rps.json`, 80,718 bytes. The tables the runner printed:
+
+**From each backend's in-process fake**
+
+| Target | Load | Runs | p50, ms | p99, ms | First token p50, ms | Added p50, ms | Added first token, ms | Requests | Not 200 | Kept the load | All answers whole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `python-fastapi` | 100/s | 1 | 245.2 | 263.0 | 54.3 | n/a | n/a | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 2000/s | 1 | 338.5 | 2795.8 | 110.8 | n/a | n/a | 59998 | 34889 | 1 of 1 | 0 of 1 |
+| `go-nethttp` | 100/s | 1 | 241.4 | 252.5 | 51.3 | n/a | n/a | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 2000/s | 1 | 242.7 | 304.2 | 52.2 | n/a | n/a | 59999 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 100/s | 1 | 241.3 | 252.4 | 51.2 | n/a | n/a | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 2000/s | 1 | 243.2 | 308.6 | 52.5 | n/a | n/a | 59998 | 0 | 1 of 1 | 1 of 1 |
+
+**Through the fake server**
+
+| Target | Load | Runs | p50, ms | p99, ms | First token p50, ms | Added p50, ms | Added first token, ms | Requests | Not 200 | Kept the load | All answers whole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `fake-server alone` | 100/s | 1 | 241.1 | 251.9 | 51.1 | n/a | n/a | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `fake-server alone` | 2000/s | 1 | 241.3 | 256.1 | 51.3 | n/a | n/a | 59998 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 100/s | 1 | 244.3 | 268.2 | 53.7 | +3.2 | +2.6 | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `python-fastapi` | 2000/s | 1 | 835.2 | 4100.4 | 550.4 | none | none | 55497 | 18990 | 0 of 1 | 0 of 1 |
+| `go-nethttp` | 100/s | 1 | 241.6 | 254.5 | 51.6 | +0.5 | +0.5 | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `go-nethttp` | 2000/s | 1 | 241.4 | 277.4 | 51.3 | +0.1 | +0.1 | 59999 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 100/s | 1 | 242.1 | 260.9 | 52.0 | +0.9 | +0.9 | 3000 | 0 | 1 of 1 | 1 of 1 |
+| `go-gin` | 2000/s | 1 | 250.3 | 657.6 | 57.4 | +9.0 | +6.1 | 60000 | 0 | 1 of 1 | 1 of 1 |
+
+What the runs show:
+- **Every run records its cores.** Each backend ran on cores 2 and 3, with 1 CPU of time and 536,870,912 bytes. The fake server ran on cores 0 and 1, with no other limit, and the load generator on cores 0 and 1. All 14 are schema 4, from commit `6b3acd0`, with `"dirty": false`.
+- **The fake server alone kept 2,000 a second on two cores it shared with the load generator,** with a p50 of 241.3 ms and a p99 of 256.1 ms.
+- **Both Go servers kept 2,000 a second from their in-process fakes,** and through the fake server. `net/http` added 0.5 ms at 100 a second and 0.1 at 2,000; Gin added 0.9 and 9.0, with a p99 of 657.6 ms at 2,000.
+- **Python added 3.2 ms at 100 a second through the fake server,** and fell behind at 2,000 from both upstreams.
+- **These check the settings, and aren't the step's numbers:** one pass, on a busy Mac, whose timing numbers are for development ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)). They're the first runs since the Python and Gin backends stopped logging each request.
+
 ## Making the numbers
 
 The numbers are made on the machine the owner names, with one command. On that machine:

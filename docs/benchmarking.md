@@ -165,7 +165,16 @@ What we keep of it is in [`contract/`](../contract/README.md), and why is in [00
   - **macOS's own sleeps** are 1 to 5 ms late, without Docker (our run, 2026-11-09).
 - **Docker on native Linux:** a container is a process on the host's kernel, with its CPU and timers. Docker's NAT adds latency at high packet rates, and host networking matches native ([Felter et al., IBM, 2014](https://www.read.seas.harvard.edu/~kohler/class/cs260r-s19/containerperf14.pdf), Redis's latency, read through [a review](https://souptikji.github.io/blog/2018/04/Containerization) and search summaries; unchecked against its tables).
 - **For us:** the report's timing numbers come from native Linux ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
-- **Docker's CPU limits:** `--cpus` limits a share of CPU time, and `--cpuset-cpus` pins a container to cores. *Unchecked.* Which one we use is plan step 3.1.
+- **Docker's CPU limits:** `--cpus` is a CFS quota, the CPU time a container may use in each 100 ms period before it's throttled. `--cpuset-cpus` limits the CPUs it may run on ([Docker's resource constraints](https://docs.docker.com/engine/containers/resource_constraints/), read on 2026-11-16). We use both: 1 CPU of time, on cores of the backend's own when the machine names them ([0027](../spec/decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)).
+
+## Each ecosystem's production set-up
+
+What each documents for running in production, read on 2026-11-16:
+- **FastAPI in containers** advises "a single Uvicorn process per container" when replication is handled outside it, as by Kubernetes. It suggests `--workers` for "a single server", as with Docker Compose, and gives no rule for how many ([FastAPI in Containers](https://fastapi.tiangolo.com/deployment/docker/)).
+- **uvicorn 0.54.0:** `--workers` "defaults to the $WEB_CONCURRENCY environment variable if available, or 1", and the access log is on unless `--no-access-log` (`uvicorn --help`). Its [deployment page](https://github.com/encode/uvicorn/blob/master/docs/deployment/index.md) says nothing of containers or of the access log.
+- **Go, since 1.25,** sets `GOMAXPROCS` to the least of the logical CPUs, the affinity mask and the cgroup's CPU quota, rounded up, and "will never set GOMAXPROCS less than 2 unless the logical CPU count or CPU affinity mask count are below 2" ([Go's `runtime`](https://pkg.go.dev/runtime), [Go 1.25's notes](https://go.dev/doc/go1.25)).
+- **Gin:** `gin.Default()` attaches the Logger and Recovery middleware, and the Logger "will write the logs to gin.DefaultWriter even if you set with GIN_MODE=release" ([Gin's documentation](https://github.com/gin-gonic/gin/blob/master/docs/doc.md)).
+- **For us:** one process per CPU of the limit, and no log line per request, in every backend ([0027](../spec/decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md), [backends](backends.md#the-rule-they-all-follow)).
 
 ## Open questions
 
@@ -173,5 +182,3 @@ Questions the sources don't answer yet. Each moves into the notes, with its sour
 
 - What are Ollama Cloud's real limits on the free plan (plan step 4.2)?
 - Is Bifrost's benchmark harness published anywhere? If so, we could run its method.
-- Does a Python backend need several worker processes to compete fairly, and how does that fit a CPU limit (plan step 3.1)?
-- What does each ecosystem document as its production set-up: for Python, uvicorn's or Gunicorn's workers; for Go, `GOMAXPROCS` in a container (plan steps 1.3, 1.4 and 3.1)?

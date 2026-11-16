@@ -1,0 +1,254 @@
+{
+  "schema": 4,
+  "id": "20261116T180544Z-python-fastapi-fake-server-2000rps",
+  "started_at": "2026-11-16T18:05:44Z",
+  "pass": 1,
+  "target": "python-fastapi-fake-server",
+  "backend": {
+    "service": "python-fastapi",
+    "image": "sha256:845e269502af8e5708487ae298e75087a51e497edf62810cf66792b2b57f2375",
+    "limits": {
+      "cpus": 1.0,
+      "memory_bytes": 536870912,
+      "cpuset": "2,3"
+    }
+  },
+  "upstream": {
+    "name": "fake-server",
+    "image": "sha256:f26ee1dfbd96b97b08ef797c9bb9140f76f673de4193a04ee33317c731e5e570",
+    "limits": {
+      "cpus": 0.0,
+      "memory_bytes": 0,
+      "cpuset": "0,1"
+    }
+  },
+  "workload": {
+    "name": "stream-20",
+    "method": "POST",
+    "path": "/api/chat/stream",
+    "body": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "In one sentence, what is an LLM?"
+        }
+      ],
+      "parameters": {
+        "max_tokens": 20
+      }
+    },
+    "rate_per_s": 2000,
+    "duration_s": 30,
+    "warmup_s": 5,
+    "connections": 1920,
+    "due_ms": 240,
+    "settings": {
+      "LLM_PROVIDER": "fake",
+      "FAKE_ANSWER_TOKENS": "256",
+      "FAKE_REASONING_TOKENS": "0",
+      "FAKE_FIRST_TOKEN_MS": "50",
+      "FAKE_TOKEN_GAP_MS": "10"
+    }
+  },
+  "load_generator": {
+    "name": "oha",
+    "version": "1.16.0",
+    "command": [
+      "/usr/local/bin/oha",
+      "--no-tui",
+      "--output-format",
+      "json",
+      "-z",
+      "30s",
+      "-w",
+      "-q",
+      "2000",
+      "--latency-correction",
+      "-c",
+      "1920",
+      "-t",
+      "30s",
+      "-m",
+      "POST",
+      "-T",
+      "application/json",
+      "-d",
+      "{\"messages\": [{\"role\": \"user\", \"content\": \"In one sentence, what is an LLM?\"}], \"parameters\": {\"max_tokens\": 20}}",
+      "http://python-fastapi:8000/api/chat/stream"
+    ],
+    "cores": [
+      0,
+      1
+    ]
+  },
+  "repository": {
+    "commit": "6b3acd07dcce6a199d077d207950b1f4220de8d2",
+    "dirty": false
+  },
+  "machine": {
+    "description": "Apple M3, 8 cores, 8 GB, macOS 14.3, Docker in Colima's VM with 4 CPUs and 5 GiB",
+    "docker": {
+      "version": "29.5.2",
+      "os": "Ubuntu 24.04.4 LTS",
+      "kernel": "6.8.0-117-generic",
+      "architecture": "aarch64",
+      "cpus": 4,
+      "memory_bytes": 5142839296
+    },
+    "compose": "5.1.4",
+    "timers": {
+      "sleeps": 200,
+      "gap_ms": 10,
+      "median_late_ms": 2.048,
+      "p99_late_ms": 10.439
+    }
+  },
+  "warmup": {
+    "requests": 10000
+  },
+  "results": {
+    "requests": 55497,
+    "requests_due": 60000,
+    "rate_per_s": 1849.9,
+    "rate_kept": false,
+    "statuses": {
+      "200": 36507
+    },
+    "errors": {
+      "connection closed before message completed": 1784,
+      "connection error": 17190,
+      "operation was canceled": 16
+    },
+    "size_bytes": 5742178,
+    "answer_bytes": 872,
+    "complete": false,
+    "latency_ms": {
+      "min": 0.465,
+      "mean": 1081.529,
+      "p50": 835.161,
+      "p95": 2703.835,
+      "p99": 4100.398,
+      "max": 17025.387
+    },
+    "first_byte_ms": {
+      "p50": 550.384,
+      "p95": 749.214,
+      "p99": 1336.836
+    }
+  },
+  "oha": {
+    "summary": {
+      "successRate": 0.6578193415860317,
+      "total": 31.871496087,
+      "slowest": 17.025387108,
+      "fastest": 0.000464638,
+      "average": 1.0815293152316212,
+      "requestsPerSec": 1741.2737653892739,
+      "totalData": 5742178,
+      "sizePerRequest": 157,
+      "sizePerSec": 180166.5658971737
+    },
+    "metrics": {
+      "success_rate": 0.6578193415860317,
+      "requests_per_sec": 1741.2737653892739,
+      "latency_ms": {
+        "min": 0.465,
+        "mean": 1081.529,
+        "p50": 835.161,
+        "p95": 2703.835,
+        "p99": 4100.398,
+        "max": 17025.387
+      }
+    },
+    "responseTimeHistogram": {
+      "0.000464638": 1,
+      "1.7029568849999999": 25678,
+      "10.215418119999999": 0,
+      "11.917910367": 0,
+      "13.620402614": 0,
+      "15.322894861": 0,
+      "17.025387108": 10,
+      "3.4054491319999998": 10226,
+      "5.107941379": 592,
+      "6.810433626": 0,
+      "8.512925873": 0
+    },
+    "latencyPercentiles": {
+      "p10": 0.00138461,
+      "p25": 0.06840428,
+      "p50": 0.835160554,
+      "p75": 1.9013148960000001,
+      "p90": 2.482981344,
+      "p95": 2.7038346989999997,
+      "p99": 4.100397548,
+      "p99.9": 4.164326226,
+      "p99.99": 17.022475931
+    },
+    "firstByteHistogram": {
+      "0.000439385": 1,
+      "1.6732902295999998": 36429,
+      "10.037544452599999": 0,
+      "11.7103952972": 0,
+      "13.383246141799999": 0,
+      "15.056096986399998": 0,
+      "16.728947831": 10,
+      "3.3461410741999997": 67,
+      "5.018991918799999": 0,
+      "6.6918427633999995": 0,
+      "8.364693608": 0
+    },
+    "firstBytePercentiles": {
+      "p10": 0.001252183,
+      "p25": 0.05648726,
+      "p50": 0.550383875,
+      "p75": 0.609928019,
+      "p90": 0.638036778,
+      "p95": 0.749214021,
+      "p99": 1.336836163,
+      "p99.9": 2.54982315,
+      "p99.99": 16.720312621
+    },
+    "rps": {
+      "mean": 4310.694192980772,
+      "stddev": 11727.33459545274,
+      "max": 289100.89619560336,
+      "min": 3.547433654175294,
+      "percentiles": {
+        "p10": 61.15975282163232,
+        "p25": 84.69423560021099,
+        "p50": 1129.6698291398668,
+        "p75": 3062.1705685719103,
+        "p90": 6174.326895464234,
+        "p95": 32443.515838951385,
+        "p99": 50902.992292236035,
+        "p99.9": 82324.85387288689,
+        "p99.99": 289100.89619560336
+      }
+    },
+    "details": {
+      "DNSDialup": {
+        "average": 7.731111154598826e-05,
+        "fastest": 1.3626e-05,
+        "slowest": 0.007078929
+      },
+      "DNSLookup": {
+        "average": 2.85605675146771e-06,
+        "fastest": 9.58e-07,
+        "slowest": 5.4631e-05
+      },
+      "firstByte": {
+        "average": 0.4134030881787587,
+        "fastest": 0.000439385,
+        "slowest": 16.728947831
+      }
+    },
+    "statusCodeDistribution": {
+      "200": 36507
+    },
+    "errorDistribution": {
+      "connection closed before message completed": 1784,
+      "connection error": 17190,
+      "operation was canceled": 16
+    }
+  }
+}

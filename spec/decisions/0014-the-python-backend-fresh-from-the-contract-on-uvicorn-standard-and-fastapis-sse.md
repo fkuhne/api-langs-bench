@@ -51,6 +51,8 @@ The Python backend is written fresh from the contract, taking the pieces of ai-b
 - [x] With `uvicorn[standard]` installed, uvicorn runs on uvloop and httptools in the container. To check from its start-up log in this step. *2026-11-06: the log doesn't say. But the running server, PID 1, has `uvloop/loop` and `httptools/parser`'s libraries loaded, read in `/proc/1/maps` ([backends](../../docs/backends.md#python-fastapi)).*
 - [ ] A client that leaves mid-stream stops the fake within one token's gap. Checked by a test in this step; measured under load in step 3.3. *2026-11-06: within three tokens, not one. At a 20 ms gap, the fake made at most three more tokens after the client left, in 20 runs out of 20; FastAPI holds up to two events on the way ([backends](../../docs/backends.md#python-fastapi)).*
 
+*Answered on 2026-11-16 by [0027](0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md): one process, without an access log.*
+
 ## Sources
 
 - ai-bootstrap at [`edc0565`](https://github.com/fkuhne/ai-bootstrap/tree/edc0565), its backend's `app/`. Read on 2026-11-06.

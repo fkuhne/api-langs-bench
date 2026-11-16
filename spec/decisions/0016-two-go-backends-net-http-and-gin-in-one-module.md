@@ -67,6 +67,8 @@ Go gets two backends in version 1: one on the standard library's `net/http`, one
 - [x] `GIN_MODE=release`, the logger and the recovery are what Gin's documentation shows for production. To check in this step. *2026-11-09: Gin's [deployment page](https://gin-gonic.com/en/docs/deployment/) lists `GIN_MODE` without recommending a mode, and shows `gin.Default()`. Gin's own warning in debug mode says to `Switch to "release" mode in production`, `using env: export GIN_MODE=release` (v1.12.0, `debug.go`). `gin.Default()` is `New()` with `Logger()` and `Recovery()` (`gin.go`). Gin also warns that trusting all proxies "is NOT safe", so the router trusts none.*
 - [x] `encoding/json` writes `<` as `\u003c`, as the contract's page says from memory. To check in this step. *2026-11-09: it does, and `&` as `\u0026` ([backends](../../docs/backends.md#go-nethttp)).*
 
+*Answered on 2026-11-16 by [0027](0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md): one process with Go's defaults; Gin's router is `gin.New()` with its recovery alone, without the logger.*
+
 ## Sources
 
 - Search summaries of [JetBrains' Go ecosystem report, 2025](https://blog.jetbrains.com/go/2025/11/10/go-language-trends-ecosystem-2025/), and [a comparison of Go web frameworks](https://glukhov.org/app-architecture/api-architecture/go-web-frameworks-stdlib-chi-gin-echo-fiber/), read on 2026-11-09.

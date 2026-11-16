@@ -75,7 +75,7 @@ Each backend calls its upstream with its ecosystem's plain HTTP client, not an O
 - [x] A stream longer than the timeout isn't cut, in either language, while its pieces keep coming. To check in this step. *2026-11-10: a stream 1.54 s long ended with `done` under a 1 s timeout, from all three backends ([backends](../../docs/backends.md#the-upstream-client)). The suite's paced stream, 920 ms long under the same timeout, passes too.*
 - [x] A client that leaves a backend closes the upstream's connection: the fake server logs it. To check in this step. *2026-11-10: a client that left at 120 ms was logged by the fake server at 114.6, 118.4 and 131.8 ms from its own start, for Python, `net/http` and Gin ([backends](../../docs/backends.md#the-upstream-client)). Once each, by hand: the suite doesn't check it yet.*
 - [ ] 1,000 connections don't bind any backend at the rates measured. To check with plan step 2.4's runs. *2026-11-16: not settled by them; see [0026](0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md).*
-- [ ] The idle expiry's defaults, 5 s in httpx2 and 90 s in Go, don't change a steady run. Unchecked; plan step 3.1.
+- [ ] The idle expiry's defaults, 5 s in httpx2 and 90 s in Go, don't change a steady run. Unchecked; plan step 3.1. *2026-11-16: computed, not measured. In a steady run each pooled connection is reused within a second, so neither expiry is reached ([0027](0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)).*
 - [x] llama.cpp's real failures fit this mapping. To check at plan step 2.3. *2026-11-10: partly. A refused parameter got llama.cpp's 400 and the backends' 502, and a stopped llama.cpp a 503 ([llama.cpp](../../docs/llama-cpp.md)). Its 503 while a model loads wasn't seen: the healthcheck holds the backends back until it's loaded.*
 
 ## Learned while building it
@@ -85,6 +85,8 @@ Each backend calls its upstream with its ecosystem's plain HTTP client, not an O
 - **Closing a body isn't enough to leave in Go:** its client reads on for up to 50 ms. The Go client ends the request's context first.
 - **Calling an upstream costs a backend much of its CPU.** In a sketch on the Mac, under 1 CPU, Python ran out between 300 and 500 streams a second through the fake server, and both Go servers were at 95% and 98% of their CPU at 2,000, against 500 and 4,000 from their in-process fakes ([backends](../../docs/backends.md#the-upstream-client)). Plan step 2.4 measures it.
 - **The contract's version is 1.1.0,** with the upstream's rules.
+
+*Answered on 2026-11-16 by [0027](0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md): the pool stays at 1,000 connections, with each library's idle expiry.*
 
 ## Sources
 

@@ -37,10 +37,12 @@ The work, as small steps in order. Each step names the decision records it depen
 
 ## Phase 3: Measuring
 
-- [ ] 3.1 **Fairness:**
+- [x] 3.1 **Fairness:**
   - each backend's CPU and memory limits, and the load generator's cores;
   - warm-up, repeats, and the order the backends run in;
   - the rule for each ecosystem's documented production set-up, such as uvicorn's workers or Go's `GOMAXPROCS` in a container.
+
+  *Picked* ([0027](decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)): 1 CPU of time and 512 MiB, final; the backends and the helpers on cores of their own when the machine names them; each ecosystem's documented production set-up, with one process per CPU of the limit and no log line per request. Warm-up, passes, order, the upstream pool and Compose's network stay as they were. *Built:* uvicorn without its access log, and Gin on `gin.New()`; a conformance check that no backend logs a request, for 633 checks; `BACKEND_CPUSET` and `HELPER_CPUSET`, recorded in each run (schema 4) ([backends](../docs/backends.md#the-rule-they-all-follow)). *Checked* on the Mac with the cores set: 14 runs, each with its cores ([runner](../docs/runner.md#a-check-of-the-cores-on-2026-11-16)).
 - [ ] 3.2 **The workloads:** whole and streamed requests at fixed rates; a ramp to the ceiling, by a written rule; many open streams at once.
 - [ ] 3.3 **Stream behaviour:** the jitter a backend adds, whether it buffers, and how fast a client's leaving stops the upstream; how each is measured.
 - [ ] 3.4 **Resources:** memory, CPU, image size and start-up time, and how they're sampled.

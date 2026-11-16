@@ -88,7 +88,7 @@ A benchmark, in a public GitHub repository, run with Docker Compose on any machi
 
 - **Scoring the model's answers.** The LLM is a means, not the subject: this isn't an LLM eval.
 - **Ranking many frameworks,** as TechEmpower did. We go deep on a few implementations, and readers can see every line of each.
-- **Code tuned only to win.** Each backend is written the way a competent engineer would write it, following its ecosystem's documented production set-up. The exact rule becomes a record (plan step 3.1).
+- **Code tuned only to win.** Each backend is written the way a competent engineer would write it, following its ecosystem's documented production set-up. The rule is [0027](decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)'s.
 - **Login.** The owner's focus is the backend for AI: chat, streaming and their metrics. Conversations take the user from `X-User-Id`, as ai-bootstrap does.
 - **Images, audio and tools in messages,** for now. Text only, so every language does the same work.
 - **RAG, agents, and modules beyond chat and conversations.**

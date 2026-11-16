@@ -68,6 +68,8 @@ On 2026-11-10, on the owner's Core i7-12850HX with Docker Desktop on Windows ([r
 - **The ladder's steps are too wide for Python there.** It kept 100 a second, and answered about 300 a second at 500 and at 1,000. Plan step 3.2's rates need points between 100 and 500.
 - **Every run says `"dirty": true`,** from Windows line endings ([0018](0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md)).
 
+*Answered on 2026-11-16 by [0027](0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md): the limits, 1 CPU and 512 MiB, are final, with cores of their own for the backends and the helpers when the machine names them.*
+
 ## Sources
 
 - Our runs on 2026-11-09 and 2026-11-10 ([runner](../../docs/runner.md#what-the-ladder-rests-on)).

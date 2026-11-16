@@ -83,7 +83,7 @@ Then check that every backend does the same work, and measure them:
 
 | Command | What it does | Time |
 |---|---|---|
-| `docker compose run --rm conformance` | Sends every backend the same requests, alone and through the fake server, and checks each answer and each fake's timing: 627 checks | About 3 minutes, once its images are built |
+| `docker compose run --rm conformance` | Sends every backend the same requests, alone and through the fake server, and checks each answer and each fake's timing: 633 checks | About 3 minutes, once its images are built |
 | `docker compose run --rm runner --passes 1` | Sends each backend the workload at five rates, from 100 to 2,000 requests a second, from its own fake and through the fake server; saves each run in [`runs/`](runs/README.md); and prints a table of what each backend added over its upstream | About 25 minutes |
 | `docker compose up -d --wait llama-cpp` | Starts llama.cpp with a small real model, to put behind a backend ([how](docs/llama-cpp.md)) | About 80 s the first time, which downloads 533 MB |
 | `docker compose down` | Stops everything | |
@@ -94,8 +94,8 @@ Port 8001 is Python on FastAPI, 8002 is Go on `net/http`, and 8003 is Go on Gin.
 
 - **One contract.** Every backend implements [the same API](contract/README.md), taken from [ai-bootstrap](https://github.com/fkuhne/ai-bootstrap): a chat answer, whole or streamed, with its errors.
 - **Proof that they do the same work.** [The conformance suite](docs/conformance.md) holds every backend to the contract, and every fake to its timetable.
-- **Code a competent engineer would write.** Each backend follows its ecosystem's documented production set-up, and none is tuned alone to win ([how each is set up](docs/backends.md)).
-- **The same limits,** and one backend running at a time.
+- **Code a competent engineer would write.** Each backend follows its ecosystem's documented production set-up, and none is tuned alone to win. One rule holds across them: one process per CPU, and no log line per request ([how each is set up](docs/backends.md#the-rule-they-all-follow)).
+- **The same limits:** 1 CPU and 512 MiB each, one backend running at a time, and the load generator on other cores wherever the machine names them.
 - **Load that doesn't wait.** Requests arrive at a fixed rate whatever the backend does, as real users do. A tool that waits for each answer hides the slow moments ([why it matters](docs/benchmarking.md#measuring-latency-without-fooling-ourselves)).
 - **Helpers that are measured first.** The load generator and the fake server are each shown to be far from their own limits.
 - **Runs that are never edited.** Each is saved once, with its commit, its versions, its settings and its machine. Numbers from different machines are never compared.
@@ -107,7 +107,7 @@ Port 8001 is Python on FastAPI, 8002 is Go on `net/http`, and 8003 is Go on Gin.
 |---|---|---|
 | 1 | A thin slice: the contract, three backends, the conformance suite, a first runner, CI, the first numbers | Done |
 | 2 | The local upstreams: a [fake server](docs/fake-server.md), each backend's [client](docs/backends.md#the-upstream-client) for it, [llama.cpp](docs/llama-cpp.md), and [runs through each](docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx) | Done |
-| 3 | Measuring: the fairness rules, more workloads, how streams behave, memory and CPU | Planned |
+| 3 | Measuring: the fairness rules, more workloads, how streams behave, memory and CPU | Under way: [the fairness rules](docs/backends.md#the-rule-they-all-follow) are set. The workloads come next |
 | 4 | A remote upstream: an imitation behind a network emulator, and Ollama Cloud | Planned |
 | 5 | Conversations stored in PostgreSQL | Planned |
 | 6 | A web UI, and the first report | Planned |
