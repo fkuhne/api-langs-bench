@@ -94,7 +94,7 @@ On the same Mac, after plan step 2.2: the Python backend's gates ran 153 tests w
 - **The run takes as long as its slowest job,** about 2 min 15 s, with no cache. A cache isn't needed yet.
 - **The conformance job** spends about 1 minute building the three backends' images and its own, then about 55 s on its checks.
 
-**With the fake server, on 2026-11-10,** in [run 42857893952](https://github.com/fkuhne/api-langs-bench/actions/runs/42857893952) on commit `7bf50e3`, one attempt:
+**With the fake server, on 2026-11-10,** in [run 42857893952](https://github.com/fkuhne/api-langs-bench/actions/runs/42857893952) on commit `b4dc9fa`, one attempt:
 
 | Job | Result | Time |
 |---|---|---|

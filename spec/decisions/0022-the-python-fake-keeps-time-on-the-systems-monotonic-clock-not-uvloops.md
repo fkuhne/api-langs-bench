@@ -7,7 +7,7 @@
 
 The contract's fake sends each token at its time, and the conformance suite's pace rule allows no event before it ([contract](../../contract/README.md#the-pace), [0017](0017-the-conformance-suite-pytest-that-drives-compose-and-a-pace-rule-from-the-machines-timers.md)).
 
-On 2026-11-10 the suite failed in CI twice out of two, on commit `484c97c`, which changed no backend: the Python backend sent 3 of 42 paced events early, by 0.10 to 0.18 ms, in both attempts ([conformance](../../docs/conformance.md#pythons-fake-sent-tokens-early-on-2026-11-10)). What was found:
+On 2026-11-10 the suite failed in CI twice out of two, on commit `23f06af`, which changed no backend: the Python backend sent 3 of 42 paced events early, by 0.10 to 0.18 ms, in both attempts ([conformance](../../docs/conformance.md#pythons-fake-sent-tokens-early-on-2026-11-10)). What was found:
 - **The Python fake took its time from the event loop's clock,** `loop.time()`, and waited with one `asyncio.sleep`.
 - **uvicorn's `standard` install runs on uvloop** ([0014](0014-the-python-backend-fresh-from-the-contract-on-uvicorn-standard-and-fastapis-sse.md)), **whose clock counts whole milliseconds.** In the backend's image, with uvloop 0.23.0, `loop.time()` read 98.0, then 102.0 ms, where asyncio's own loop read 41.5567, then 45.9356. At a wake it was 0.7 to 2.0 ms behind `time.monotonic()` (our run on the Mac).
 - **So the fake's start, and every deadline counted from it, could sit up to 2 ms early.** What hid it: the time a request takes to reach the backend, and a machine's late timers. CI's machines that day were faster: Python's median lateness was 0.68 and 0.82 ms, against 1.14 to 2.58 ms in four earlier runs, whose smallest lateness was already 0.15 ms.

@@ -290,7 +290,7 @@ What the runs show:
 - **Both Go servers added 0.2 to 0.9 ms over the fake server,** at every rate, with every answer whole: a little more at 100 and 200 a second than at 1,000 and 2,000. The first token's added time is nearly the same, so it's paid once, before the first token, not on every token.
 - **Python added 3.3 ms at 100 a second and 2.0 ms at 200,** through the fake server. It didn't keep 500: it answered 390 a second, while from its in-process fake it kept 500. Calling an upstream costs it about a fifth of its ceiling here.
 - **Through llama.cpp, a backend's cost doesn't show.** llama.cpp alone took 260.8 to 286.3 ms at the median from one pass to the next; the backends' added time ranged from -11.3 to +62.4 ms. The medians of the added time, +5.2 to +6.0 ms, are within that noise. The model does the same work every time: six requests with the same seed returned the same 20 tokens.
-- **Each file says `"dirty": true`:** the runner's own code wasn't committed yet when they were made, as for the check of 2026-11-10. It's the code of commit `a01fd95`.
+- **Each file says `"dirty": true`:** the runner's own code wasn't committed yet when they were made, as for the check of 2026-11-10. It's the code of commit `79c9e60`.
 - **The files take 376 kB,** 4.7 to 17.6 kB each: the fake server alone has the largest, since its chunks are llama.cpp's.
 
 What building it taught:
@@ -319,7 +319,7 @@ Plan step 2.4's numbers from both fakes: `docker compose run --rm runner`, in th
 - **The timers** woke 0.11 to 0.33 ms late at the median before each run, and 0.25 to 1.24 ms at the p99.
 - **The limits:** 1 CPU and 536,870,912 bytes for every backend, read back from Docker. The fake server has none.
 - **The workload:** `stream-20` as [above](#what-a-run-is), for 30 s after 5 s of warm-up, from each backend's in-process fake and through the fake server.
-- **The code:** commit `fbf0a01`, with `"dirty": false` in every file. The new checkout of [0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md) worked.
+- **The code:** commit `671f67d`, with `"dirty": false` in every file. The files name it `fbf0a01`, its hash before the history was [rewritten](../runs/README.md#commits-renamed-on-2026-11-16). The new checkout of [0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md) worked.
 
 Each cell is the median over the three passes, with the range. The tables are the runner's own, made again from the 105 files with `bench.runner.table`:
 
@@ -442,7 +442,7 @@ What these numbers are:
 Every one of the 36 files has `"dirty": true`, which says a tracked file differed from commit `0fe92be`. The cause, reproduced on the Mac on 2026-11-10 and confirmed on that machine (below):
 - **Git for Windows checks text files out with CRLF line endings,** from a `core.autocrlf` it sets in its system-wide config, outside the repository.
 - **The runner reads the repository from inside a container,** where that setting can't be seen. So each file's CRLF content looks like a change.
-- **A clone made that way read as dirty,** in 180 of its 183 tracked files, at commit `a3fd6e4`. The same clone with the setting in its own config, and a clone with LF endings, read as clean.
+- **A clone made that way read as dirty,** in 180 of its 183 tracked files, at commit `5f11cb7`. The same clone with the setting in its own config, and a clone with LF endings, read as clean.
 
 **Checked on that machine by the owner, 2026-11-10:** `git status` says the tree is clean, and `git config --show-origin core.autocrlf` says `true`. That fits the cause, and the file that sets it is `C:/Program Files/Git/etc/gitconfig`, Git for Windows' system-wide config, outside the repository.
 

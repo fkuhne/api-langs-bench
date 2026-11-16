@@ -143,7 +143,7 @@ The same runner, later that day: both attempts of [run 42830465967](https://gith
 - **The Mac never showed it:** its late timers cover a millisecond many times over.
 - **The fix** is in [0022](../spec/decisions/0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md): the fake reads the system's monotonic clock, and waits again when the event loop wakes early.
 
-**After the fix,** three attempts of [run 42839239272](https://github.com/fkuhne/api-langs-bench/actions/runs/42839239272), on commit `72fdaf1`: 288 checks passed in each.
+**After the fix,** three attempts of [run 42839239272](https://github.com/fkuhne/api-langs-bench/actions/runs/42839239272), on commit `8a1114f`: 288 checks passed in each.
 
 | | Attempt 1 | Attempt 2 | Attempt 3 |
 |---|---|---|---|
@@ -176,7 +176,7 @@ go-gin via fake-server: 42 events, lateness median 6.76 ms, min 5.34, max 18.93;
 - **That's the Mac's VM again.** On Linux's timers the margin is loose in both cases; CI's lines will say how late each backend is there.
 - **Python is later than Go through the fake server,** by about 9 ms here against 2 to 5 ms alone. One stream at a time, on an idle VM, says little about load; plan step 2.4 measures it.
 
-**In CI, on Linux's timers,** three attempts of [run 42905293392](https://github.com/fkuhne/api-langs-bench/actions/runs/42905293392), on commit `658e24e`: 627 checks passed in each, in 170 to 174 s. The median lateness of each paced stream:
+**In CI, on Linux's timers,** three attempts of [run 42905293392](https://github.com/fkuhne/api-langs-bench/actions/runs/42905293392), on commit `613f140`: 627 checks passed in each, in 170 to 174 s. The median lateness of each paced stream:
 
 | | Attempt 1 | Attempt 2 | Attempt 3 |
 |---|---|---|---|

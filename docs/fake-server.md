@@ -123,7 +123,7 @@ go-nethttp: 42 events, lateness median 6.29 ms, min 4.51, max 10.06; the last qu
 - **The fake server keeps the pace as the Go backends' in-process fake does:** no token early, and no lateness that adds up.
 - **Its headers came at 114.8 ms,** with the first token, due at 100 ms. A backend's come at once.
 
-**In CI, on Linux's tighter timers,** the same day, in [run 42857893952](https://github.com/fkuhne/api-langs-bench/actions/runs/42857893952) on commit `7bf50e3`: 321 checks passed in 74.64 s.
+**In CI, on Linux's tighter timers,** the same day, in [run 42857893952](https://github.com/fkuhne/api-langs-bench/actions/runs/42857893952) on commit `b4dc9fa`: 321 checks passed in 74.64 s.
 
 ```text
 the machine's timers: 200 sleeps of 10 ms woke 0.11 ms late at the median, 0.12 ms at the p99; tolerance 10.12 ms (the p99 plus 10 ms)
