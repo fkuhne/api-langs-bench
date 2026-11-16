@@ -1,0 +1,240 @@
+{
+  "schema": 3,
+  "id": "20261116T135518Z-python-fastapi-fake-2000rps",
+  "started_at": "2026-11-16T13:55:18Z",
+  "pass": 3,
+  "target": "python-fastapi-fake",
+  "backend": {
+    "service": "python-fastapi",
+    "image": "sha256:1b5489255125912afd5a1fd97e382cc88e28432f58b31da06e8079b2ca4d9d5f",
+    "limits": {
+      "cpus": 1.0,
+      "memory_bytes": 536870912
+    }
+  },
+  "upstream": {
+    "name": "fake",
+    "image": null
+  },
+  "workload": {
+    "name": "stream-20",
+    "method": "POST",
+    "path": "/api/chat/stream",
+    "body": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "In one sentence, what is an LLM?"
+        }
+      ],
+      "parameters": {
+        "max_tokens": 20
+      }
+    },
+    "rate_per_s": 2000,
+    "duration_s": 30,
+    "warmup_s": 5,
+    "connections": 1920,
+    "due_ms": 240,
+    "settings": {
+      "LLM_PROVIDER": "fake",
+      "FAKE_ANSWER_TOKENS": "256",
+      "FAKE_REASONING_TOKENS": "0",
+      "FAKE_FIRST_TOKEN_MS": "50",
+      "FAKE_TOKEN_GAP_MS": "10"
+    }
+  },
+  "load_generator": {
+    "name": "oha",
+    "version": "1.16.0",
+    "command": [
+      "/usr/local/bin/oha",
+      "--no-tui",
+      "--output-format",
+      "json",
+      "-z",
+      "30s",
+      "-w",
+      "-q",
+      "2000",
+      "--latency-correction",
+      "-c",
+      "1920",
+      "-t",
+      "30s",
+      "-m",
+      "POST",
+      "-T",
+      "application/json",
+      "-d",
+      "{\"messages\": [{\"role\": \"user\", \"content\": \"In one sentence, what is an LLM?\"}], \"parameters\": {\"max_tokens\": 20}}",
+      "http://python-fastapi:8000/api/chat/stream"
+    ]
+  },
+  "repository": {
+    "commit": "fbf0a013f25b2548800e19bd6bf071cec46da496",
+    "dirty": false
+  },
+  "machine": {
+    "description": "Intel Core i7-12850HX, 16 cores / 24 threads, 32 GiB RAM, Windows 11 Enterprise 25H2 (build 26200.9448), Docker Desktop (WSL 2)",
+    "docker": {
+      "version": "29.7.2",
+      "os": "Docker Desktop",
+      "kernel": "6.18.33.2-microsoft-standard-WSL2",
+      "architecture": "x86_64",
+      "cpus": 24,
+      "memory_bytes": 16558772224
+    },
+    "compose": "5.1.4",
+    "timers": {
+      "sleeps": 200,
+      "gap_ms": 10,
+      "median_late_ms": 0.218,
+      "p99_late_ms": 0.828
+    }
+  },
+  "warmup": {
+    "requests": 3316
+  },
+  "results": {
+    "requests": 10757,
+    "requests_due": 60000,
+    "rate_per_s": 358.56666666666666,
+    "rate_kept": false,
+    "statuses": {
+      "200": 9894
+    },
+    "errors": {
+      "timeout": 863
+    },
+    "size_bytes": 8558310,
+    "answer_bytes": 865,
+    "complete": false,
+    "latency_ms": {
+      "min": 276.492,
+      "mean": 13930.752,
+      "p50": 13627.408,
+      "p95": 26783.836,
+      "p99": 27006.66,
+      "max": 29991.688
+    },
+    "first_byte_ms": {
+      "p50": 909.156,
+      "p95": 6018.418,
+      "p99": 23232.812
+    }
+  },
+  "oha": {
+    "summary": {
+      "successRate": 0.9197731709584457,
+      "total": 32.374552762,
+      "slowest": 29.99168841,
+      "fastest": 0.276492155,
+      "average": 13.930752013332379,
+      "requestsPerSec": 332.26713830086175,
+      "totalData": 8558310,
+      "sizePerRequest": 865,
+      "sizePerSec": 264352.9954812353
+    },
+    "metrics": {
+      "success_rate": 0.9197731709584457,
+      "requests_per_sec": 332.26713830086175,
+      "latency_ms": {
+        "min": 276.492,
+        "mean": 13930.752,
+        "p50": 13627.408,
+        "p95": 26783.836,
+        "p99": 27006.66,
+        "max": 29991.688
+      }
+    },
+    "responseTimeHistogram": {
+      "0.276492155": 1,
+      "12.162570657": 1077,
+      "15.1340902825": 912,
+      "18.105609907999998": 957,
+      "21.0771295335": 1037,
+      "24.048649159": 1008,
+      "27.0201687845": 1461,
+      "29.991688410000002": 57,
+      "3.2480117805": 1199,
+      "6.219531406": 1037,
+      "9.191051031499999": 1148
+    },
+    "latencyPercentiles": {
+      "p10": 2.408805355,
+      "p25": 6.7699966499999995,
+      "p50": 13.627408132,
+      "p75": 21.234684746,
+      "p90": 25.715120605,
+      "p95": 26.783836009,
+      "p99": 27.006660351,
+      "p99.9": 29.451203487,
+      "p99.99": 29.99168841
+    },
+    "firstByteHistogram": {
+      "0.05555164": 1,
+      "11.202018326": 75,
+      "13.988634997499998": 66,
+      "16.775251669000003": 59,
+      "19.561868340500002": 52,
+      "2.8421683115": 9284,
+      "22.348485012": 57,
+      "25.1351016835": 60,
+      "27.921718355": 60,
+      "5.628784983": 101,
+      "8.4154016545": 79
+    },
+    "firstBytePercentiles": {
+      "p10": 0.373279257,
+      "p25": 0.501074897,
+      "p50": 0.909156073,
+      "p75": 1.506361123,
+      "p90": 1.943771795,
+      "p95": 6.01841768,
+      "p99": 23.232812109,
+      "p99.9": 27.43044756,
+      "p99.99": 27.921718355
+    },
+    "rps": {
+      "mean": 9293.35228384822,
+      "stddev": 11394.583830344849,
+      "max": 66309.69945125561,
+      "min": 3.570710680046348,
+      "percentiles": {
+        "p10": 23.128999264173775,
+        "p25": 27.145714694683498,
+        "p50": 228.60764002160977,
+        "p75": 19063.64158450631,
+        "p90": 24911.874244871597,
+        "p95": 29238.056254018786,
+        "p99": 38709.8022896079,
+        "p99.9": 57101.88880397032,
+        "p99.99": 66309.69945125561
+      }
+    },
+    "details": {
+      "DNSDialup": {
+        "average": 0.001165954962157048,
+        "fastest": 3.0037e-05,
+        "slowest": 0.02959155
+      },
+      "DNSLookup": {
+        "average": 1.0418463576158955e-05,
+        "fastest": 1.442e-06,
+        "slowest": 9.4575e-05
+      },
+      "firstByte": {
+        "average": 1.7565537712138732,
+        "fastest": 0.05555164,
+        "slowest": 27.921718355
+      }
+    },
+    "statusCodeDistribution": {
+      "200": 9894
+    },
+    "errorDistribution": {
+      "timeout": 863
+    }
+  }
+}

@@ -1,0 +1,240 @@
+{
+  "schema": 3,
+  "id": "20261116T134805Z-python-fastapi-fake-server-2000rps",
+  "started_at": "2026-11-16T13:48:05Z",
+  "pass": 2,
+  "target": "python-fastapi-fake-server",
+  "backend": {
+    "service": "python-fastapi",
+    "image": "sha256:1b5489255125912afd5a1fd97e382cc88e28432f58b31da06e8079b2ca4d9d5f",
+    "limits": {
+      "cpus": 1.0,
+      "memory_bytes": 536870912
+    }
+  },
+  "upstream": {
+    "name": "fake-server",
+    "image": "sha256:8d1770678eb6cfdf48f03f57464f3996b2129ab065b3d7a59b8e86160eb6e40e"
+  },
+  "workload": {
+    "name": "stream-20",
+    "method": "POST",
+    "path": "/api/chat/stream",
+    "body": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "In one sentence, what is an LLM?"
+        }
+      ],
+      "parameters": {
+        "max_tokens": 20
+      }
+    },
+    "rate_per_s": 2000,
+    "duration_s": 30,
+    "warmup_s": 5,
+    "connections": 1920,
+    "due_ms": 240,
+    "settings": {
+      "LLM_PROVIDER": "fake",
+      "FAKE_ANSWER_TOKENS": "256",
+      "FAKE_REASONING_TOKENS": "0",
+      "FAKE_FIRST_TOKEN_MS": "50",
+      "FAKE_TOKEN_GAP_MS": "10"
+    }
+  },
+  "load_generator": {
+    "name": "oha",
+    "version": "1.16.0",
+    "command": [
+      "/usr/local/bin/oha",
+      "--no-tui",
+      "--output-format",
+      "json",
+      "-z",
+      "30s",
+      "-w",
+      "-q",
+      "2000",
+      "--latency-correction",
+      "-c",
+      "1920",
+      "-t",
+      "30s",
+      "-m",
+      "POST",
+      "-T",
+      "application/json",
+      "-d",
+      "{\"messages\": [{\"role\": \"user\", \"content\": \"In one sentence, what is an LLM?\"}], \"parameters\": {\"max_tokens\": 20}}",
+      "http://python-fastapi:8000/api/chat/stream"
+    ]
+  },
+  "repository": {
+    "commit": "fbf0a013f25b2548800e19bd6bf071cec46da496",
+    "dirty": false
+  },
+  "machine": {
+    "description": "Intel Core i7-12850HX, 16 cores / 24 threads, 32 GiB RAM, Windows 11 Enterprise 25H2 (build 26200.9448), Docker Desktop (WSL 2)",
+    "docker": {
+      "version": "29.7.2",
+      "os": "Docker Desktop",
+      "kernel": "6.18.33.2-microsoft-standard-WSL2",
+      "architecture": "x86_64",
+      "cpus": 24,
+      "memory_bytes": 16558772224
+    },
+    "compose": "5.1.4",
+    "timers": {
+      "sleeps": 200,
+      "gap_ms": 10,
+      "median_late_ms": 0.264,
+      "p99_late_ms": 0.881
+    }
+  },
+  "warmup": {
+    "requests": 2578
+  },
+  "results": {
+    "requests": 6292,
+    "requests_due": 60000,
+    "rate_per_s": 209.73333333333332,
+    "rate_kept": false,
+    "statuses": {
+      "200": 5090
+    },
+    "errors": {
+      "timeout": 1202
+    },
+    "size_bytes": 4438480,
+    "answer_bytes": 872,
+    "complete": false,
+    "latency_ms": {
+      "min": 363.256,
+      "mean": 15722.339,
+      "p50": 16077.744,
+      "p95": 28828.109,
+      "p99": 28924.119,
+      "max": 29943.411
+    },
+    "first_byte_ms": {
+      "p50": 1261.58,
+      "p95": 10323.757,
+      "p99": 23055.552
+    }
+  },
+  "oha": {
+    "summary": {
+      "successRate": 0.8089637635092181,
+      "total": 32.071022471,
+      "slowest": 29.943410819,
+      "fastest": 0.363255849,
+      "average": 15.722338733731414,
+      "requestsPerSec": 196.18956663104512,
+      "totalData": 4438480,
+      "sizePerRequest": 872,
+      "sizePerSec": 138395.3381596569
+    },
+    "metrics": {
+      "success_rate": 0.8089637635092181,
+      "requests_per_sec": 196.18956663104512,
+      "latency_ms": {
+        "min": 363.256,
+        "mean": 15722.339,
+        "p50": 16077.744,
+        "p95": 28828.109,
+        "p99": 28924.119,
+        "max": 29943.411
+      }
+    },
+    "responseTimeHistogram": {
+      "0.363255849": 1,
+      "12.195317837": 452,
+      "15.153333334": 474,
+      "18.111348831": 498,
+      "21.069364328000002": 462,
+      "24.027379825": 414,
+      "26.985395322": 525,
+      "29.943410819": 776,
+      "3.321271346": 570,
+      "6.2792868429999995": 436,
+      "9.23730234": 482
+    },
+    "latencyPercentiles": {
+      "p10": 2.918037162,
+      "p25": 7.521060596,
+      "p50": 16.077743779,
+      "p75": 24.232442764,
+      "p90": 28.4092612,
+      "p95": 28.828109374,
+      "p99": 28.92411915,
+      "p99.9": 29.563838672,
+      "p99.99": 29.943410819
+    },
+    "firstByteHistogram": {
+      "0.088903437": 1,
+      "10.7652391358": 59,
+      "13.4343230605": 46,
+      "16.103406985199996": 47,
+      "18.772490909899997": 42,
+      "2.7579873616999997": 4620,
+      "21.441574834599997": 39,
+      "24.110658759299998": 34,
+      "26.779742684": 37,
+      "5.4270712863999995": 99,
+      "8.0961552111": 66
+    },
+    "firstBytePercentiles": {
+      "p10": 0.602669772,
+      "p25": 0.887261039,
+      "p50": 1.261580446,
+      "p75": 1.525616036,
+      "p90": 1.7865902359999999,
+      "p95": 10.323757162,
+      "p99": 23.055551664,
+      "p99.9": 26.381427209,
+      "p99.99": 26.779742684
+    },
+    "rps": {
+      "mean": 9208.310551528357,
+      "stddev": 22344.486398044337,
+      "max": 615384.6152565542,
+      "min": 2.7405809985675202,
+      "percentiles": {
+        "p10": 14.752326146786354,
+        "p25": 20.954797379786687,
+        "p50": 138.79096415307026,
+        "p75": 17803.129434136827,
+        "p90": 22599.993671997716,
+        "p95": 26679.615173163642,
+        "p99": 35850.003584964004,
+        "p99.9": 348310.693143147,
+        "p99.99": 615384.6152565542
+      }
+    },
+    "details": {
+      "DNSDialup": {
+        "average": 0.0014600044735376028,
+        "fastest": 3.1409e-05,
+        "slowest": 0.032219245
+      },
+      "DNSLookup": {
+        "average": 1.043738161559888e-05,
+        "fastest": 1.377e-06,
+        "slowest": 7.419e-05
+      },
+      "firstByte": {
+        "average": 2.181939959375454,
+        "fastest": 0.088903437,
+        "slowest": 26.779742684
+      }
+    },
+    "statusCodeDistribution": {
+      "200": 5090
+    },
+    "errorDistribution": {
+      "timeout": 1202
+    }
+  }
+}
