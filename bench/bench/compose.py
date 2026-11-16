@@ -97,9 +97,12 @@ class Compose:
         container = json.loads(lines[0])
         return State(state=container["State"], exit_code=container["ExitCode"])
 
-    def logs(self, service: str, lines: int = 20) -> str:
-        """The last lines `service`'s container wrote."""
-        return self._output("logs", "--no-color", "--tail", str(lines), service)
+    def logs(self, service: str, lines: int = 20, *, since: str | None = None) -> str:
+        """The last lines `service`'s container wrote; or, `since` a time in RFC 3339, every
+        line it wrote from then on."""
+        if since is None:
+            return self._output("logs", "--no-color", "--tail", str(lines), service)
+        return self._output("logs", "--no-color", "--since", since, service)
 
     def stop(self, *services: str) -> None:
         """Stops these services' containers, and keeps them."""

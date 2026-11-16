@@ -18,7 +18,7 @@ These are each step's checks, on a development Mac, with every backend answering
 **How it's set up:**
 - **Versions:** FastAPI 0.143.0 on Starlette 1.10.0 and Pydantic 2.14.3, served by uvicorn 0.54.0 with its `standard` extras, on Python 3.14.8.
 - **Why `uvicorn[standard]`:** it's what [FastAPI's deployment page](https://fastapi.tiangolo.com/deployment/manually/) recommends. The running server has uvloop 0.23.0's event loop and httptools 0.9.0's parsers loaded (in `/proc/1/maps`).
-- **One process,** with uvicorn's defaults, its access log included, until plan step 3.1's rule.
+- **One process, without an access log,** by [the rule they all follow](#the-rule-they-all-follow). Until 2026-11-16 it ran with uvicorn's defaults, its access log included.
 - **The fake's clock** is `time.monotonic()`, not the event loop's: uvloop's `loop.time()` counts whole milliseconds, and read 0.7 to 2.0 ms behind it (our run in the backend's image, 2026-11-10). The fake waits again when the loop wakes before a token's time ([0022](../spec/decisions/0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md)).
 - **The stream** goes through FastAPI's own `EventSourceResponse`.
 - **Started with** `docker compose up -d --wait python-fastapi`, on `127.0.0.1:8001`.
@@ -57,7 +57,7 @@ These are each step's checks, on a development Mac, with every backend answering
 - **The routes:** `ServeMux` with method patterns, and `encoding/json`. The stream's status and headers go as soon as the body is valid. Then each event is written by hand and flushed through `http.ResponseController`.
 - **The server:** an `http.Server` with a 10 s `ReadHeaderTimeout` and no write timeout. On SIGTERM it stops taking requests, and gives open ones 10 s.
 - **The image:** built with `CGO_ENABLED=0 GOOS=linux go build`, as [Docker's guide](https://docs.docker.com/guides/golang/build-images/) does. It runs on distroless's static Debian 13 image as `nonroot`, pinned by digest. Compose's healthcheck runs the binary's own `healthcheck` command, since the image has no shell.
-- **One process,** with Go's defaults, until plan step 3.1's rule. `net/http` writes no access log.
+- **One process, with Go's defaults,** by [the rule they all follow](#the-rule-they-all-follow). `net/http` writes no access log.
 - **Started with** `docker compose up -d --wait go-nethttp`, on `127.0.0.1:8002`.
 
 **Measured on 2026-11-09, beside the Python backend.** Both were measured in the same session, one after the other, on the machine named at the top of this page:
@@ -162,10 +162,10 @@ docker run --rm -i --network api-langs-bench_default python:3.14.8-slim-trixie \
 
 **How it's set up:**
 - **Versions:** Gin v1.12.0, on Go 1.27.3. Its JSON is `encoding/json`, Gin's default without build tags.
-- **The routes:** `gin.Default()`, with Gin's logger and recovery. The router trusts no proxy, as Gin's warning asks, since none stands in front of it. Requests are bound with `ShouldBindJSON` and `binding` tags, checked by go-playground's validator. Answers are written with `c.JSON`.
+- **The routes:** `gin.New()`, with Gin's recovery alone; until 2026-11-16, `gin.Default()`, with Gin's logger too. The router trusts no proxy, as Gin's warning asks, since none stands in front of it. Requests are bound with `ShouldBindJSON` and `binding` tags, checked by go-playground's validator. Answers are written with `c.JSON`.
 - **The stream:** the status and headers go as soon as the body is valid. Then each event is written with `c.SSEvent`, and flushed. Gin writes `event:token` and `data:{…}`, with no space after the colon, which the SSE standard allows.
 - **Release mode:** `GIN_MODE=release`, set in the image, as Gin's own warning asks for production. Gin's deployment page lists the variable without recommending a mode.
-- **The access log:** Gin's logger writes a line per request to stdout, as uvicorn does. `net/http` writes none. All three keep their defaults until plan step 3.1's rule.
+- **No access log,** by [the rule they all follow](#the-rule-they-all-follow). Gin's logger writes a line per request to stdout "even if you set with GIN_MODE=release" ([Gin's documentation](https://github.com/gin-gonic/gin/blob/master/docs/doc.md)), so it's left out.
 - **The binary** is 28.7 MiB, against `net/http`'s 9.6 MiB. Gin links every codec it can bind or render, used or not: YAML, TOML, protobuf, msgpack and BSON. It also links HTTP/3's quic-go (`go version -m`).
 - **The image, the server and the healthcheck** are the `net/http` backend's.
 - **Started with** `docker compose up -d --wait go-gin`, on `127.0.0.1:8003`.
@@ -198,6 +198,70 @@ docker run --rm -i --network api-langs-bench_default python:3.14.8-slim-trixie \
 **What these step checks show, on this machine:**
 - **Size, start-up and idle memory** set Go apart from Python by about ten times. Gin costs more than `net/http` in size, through its dependencies, and a little in memory and start-up.
 - **The pace and liveness don't set any of them apart here.** The VM's late wake-ups are larger than what each adds ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)). The benchmark's own runs start at plan step 1.6.
+
+## The rule they all follow
+
+Each backend runs in its ecosystem's documented production set-up, with one rule across them, from plan step 3.1 ([0027](../spec/decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)):
+
+| | Python, FastAPI | Go, `net/http` | Go, Gin |
+|---|---|---|---|
+| **One process per CPU of the limit:** one, for 1 CPU | One uvicorn process. [FastAPI's container guide](https://fastapi.tiangolo.com/deployment/docker/) advises "a single Uvicorn process per container"; uvicorn would take more from `WEB_CONCURRENCY` | One process. `GOMAXPROCS` is Go's default: the least of the CPUs, the affinity mask and the CPU quota, rounded up, never below 2 ([Go's `runtime`](https://pkg.go.dev/runtime)). Under 1 CPU of time, 2 | As `net/http` |
+| **No log line per request** | `--no-access-log` | Writes none | `gin.New()` with `gin.Recovery()`, not `gin.Default()`, whose logger writes one even in release mode |
+| **Release mode** | uvicorn has none | Has none | `GIN_MODE=release` |
+| **Limits** | 1 CPU of time and 512 MiB ([runner](runner.md#what-a-run-is)) | The same | The same |
+
+- **Nothing else is tuned:** no setting for the garbage collector, buffers or threads that the documentation doesn't name for production.
+- **Warnings and errors are still logged,** to stdout.
+- **The conformance suite checks the log rule for every backend,** from each upstream: four requests, whole and streamed, write no line to the backend's log ([`test_setup.py`](../bench/conformance/test_setup.py)). Against the images built before the rule, it caught uvicorn's access log and Gin's `[GIN]` lines (our run, 2026-11-16). Gin's own test checks it too ([`server_test.go`](../backends/go/internal/ginserver/server_test.go)).
+- **Runs made before 2026-11-16** had a log line per request from Python and Gin.
+
+## Fairness sketches, on 2026-11-16
+
+Two questions of plan step 3.1, sketched on the Mac named at the top of this page, with a load average of 3 to 7 from outside Docker ([0027](../spec/decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)). Nothing was saved in `runs/`: these aren't runs.
+
+**How it was done:** each backend was started by hand from its image, with 512 MiB, answering from its in-process fake at `stream-20`'s pace. oha 1.16.0 sent `stream-20` from the runner's image, on Compose's network: 5 s of warm-up, then 20 s measured, with the runner's flags.
+
+**Limiting the CPU: a share of time, or cores.** Each cell is a run's p50, then its p99:
+
+| How the backend's CPU was limited | Go, `net/http`, at 2,000/s | Python at 400/s |
+|---|---|---|
+| `--cpus 1`, nothing pinned, as until now | 242.3, 278.1 ms; 242.4, 291.7 ms | 243.6, 266.6 ms |
+| `--cpus 1 --cpuset-cpus 2,3`, with oha on cores 0 and 1 | 242.7, 294.8 ms; 242.5, 281.3 ms | 243.4, 288.5 ms |
+| `--cpuset-cpus 3`, one core alone, with oha on cores 0 and 1 | 241.9, 267.8 ms; 241.9, 284.5 ms | 243.5, 951.7 ms |
+
+- Go ran twice in each way, the ways alternating. Every run kept its rate, with every request a 200.
+- **The medians agree within 0.8 ms.** The p99s vary without a pattern, as on a busy host. On this Mac, the way the CPU is limited doesn't show.
+
+**Python's access log,** with `--cpuset-cpus 3`, at 300 a second. The CPU is the container's `usage_usec`, from its cgroup's `cpu.stat`, read before and after the 20 s:
+
+| | CPU per request | p99 |
+|---|---|---|
+| The access log on, uvicorn's default | 2,283 µs; 2,104 µs | 330.9 ms; 634.8 ms |
+| `--no-access-log` | 1,918 µs; 2,238 µs | 254.1 ms; 293.2 ms |
+
+- **The two overlap:** the log's cost doesn't show above the noise here. Plan step 3.4's CPU sampling can measure it.
+- **Past its ceiling,** at 1,000 a second, Python answered 392 and 628 requests a second with the log, and 601 and 589 without: noise again.
+
+<details>
+<summary>The commands</summary>
+
+For each run, with the backend's image, its CPU flags, and for the Python runs without a log, uvicorn's command with `--no-access-log` after the image:
+
+```text
+docker run -d --name sketch-backend --network api-langs-bench_default --memory 512m --cpus 1 \
+  -e LLM_PROVIDER=fake -e FAKE_ANSWER_TOKENS=256 -e FAKE_REASONING_TOKENS=0 \
+  -e FAKE_FIRST_TOKEN_MS=50 -e FAKE_TOKEN_GAP_MS=10 api-langs-bench-go-nethttp
+docker run --rm --network api-langs-bench_default --cpuset-cpus 0,1 --ulimit nofile=65536:65536 \
+  --entrypoint /usr/local/bin/oha api-langs-bench-runner --no-tui --output-format json \
+  -z 20s -w -q 2000 --latency-correction -c 1920 -t 30s -m POST -T application/json \
+  -d '{"messages": [{"role": "user", "content": "In one sentence, what is an LLM?"}], "parameters": {"max_tokens": 20}}' \
+  http://sketch-backend:8000/api/chat/stream
+docker exec sketch-backend cat /sys/fs/cgroup/cpu.stat
+```
+
+The same oha command, with `-z 5s`, ran first as the warm-up. Connections were four times the streams open at once: 1,920 at 2,000 a second, 384 at 400, 288 at 300.
+
+</details>
 
 ## The upstream client
 

@@ -71,6 +71,18 @@ def test_limits_fail_without_exactly_one_running_container() -> None:
         compose(Docker((0, "\n", ""))).limits("go-gin")
 
 
+def test_logs_since_a_time_are_every_line_from_then() -> None:
+    docker = Docker((0, "go-gin-1  | a line\n", ""))
+
+    assert compose(docker).logs("go-gin", since="2026-11-16T18:00:00+00:00") == (
+        "go-gin-1  | a line\n"
+    )
+    assert docker.calls[0][0] == [
+        *BASE,
+        *["logs", "--no-color", "--since", "2026-11-16T18:00:00+00:00", "go-gin"],
+    ]
+
+
 def test_up_is_false_when_the_service_doesnt_get_healthy() -> None:
     assert compose(Docker((1, "", "container exited (1)"))).up("go-gin", {}) is False
 

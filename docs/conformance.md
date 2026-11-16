@@ -25,11 +25,12 @@ pytest's options may follow, such as `-k go-gin` for one backend. Why it's built
 
 ## What it checks
 
-627 checks: 99 for each backend from each of its two upstreams, and 33 for the fake server alone ([below](#the-fake-server-alone)). 21 more, through llama.cpp's real model, run only when asked, with `-m llama_cpp` ([llama.cpp](llama-cpp.md#checked-by-the-conformance-suite)). For each backend, from each upstream:
+633 checks: 100 for each backend from each of its two upstreams, and 33 for the fake server alone ([below](#the-fake-server-alone)). 21 more, through llama.cpp's real model, run only when asked, with `-m llama_cpp` ([llama.cpp](llama-cpp.md#checked-by-the-conformance-suite)). For each backend, from each upstream:
 
 | Group | Settings | What |
 |---|---|---|
 | Health | The defaults | Liveness and readiness |
+| The set-up | The defaults | Four requests, whole and streamed, write no line to the backend's log ([0027](../spec/decisions/0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md)) |
 | The answer | The defaults | The contract's example, whole and streamed. `max_tokens`: 14 values, of which only a smaller positive whole number cuts the answer. Wrapping past the 175th token. `prompt_tokens`, with a non-breaking space and other white space. Other fields ignored. `done` against the whole answer |
 | Errors | The defaults | 19 invalid bodies on both paths, each answering 422. Each `fake_error` status, whole and streamed, at once and after 2 tokens. 11 malformed `fake_error`s, each answering 502 |
 | The pace | Paced: the first token at 100 ms, then one every 20 ms; 2 reasoning tokens, then 40 answer tokens | The reasoning, whole and streamed. The pace rule on a stream of 42 events. The whole answer, a failure and a malformed `fake_error`, each at its time |

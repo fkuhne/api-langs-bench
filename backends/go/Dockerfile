@@ -26,7 +26,8 @@ COPY --from=contract fake-tokens.json /contract/fake-tokens.json
 COPY --from=build /out/server /app/server
 USER nonroot:nonroot
 EXPOSE 8000
-# One process, with Go's defaults, until plan step 3.1's rule (spec/decisions/0016).
+# One process, with Go's defaults: GOMAXPROCS follows the container's CPU limit, with a floor of 2
+# (spec/decisions/0027).
 ENTRYPOINT ["/app/server"]
 
 FROM base AS dev

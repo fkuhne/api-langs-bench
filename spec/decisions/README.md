@@ -47,3 +47,4 @@ Don't rewrite a record to change its decision. Write a new record and mark the o
 | [0024](0024-each-backends-upstream-client-its-plain-http-client-one-pool-setting-no-retries.md) | Each backend's upstream client: its plain HTTP client, one pool setting, no retries | Accepted | 2026-11-10 |
 | [0025](0025-llama-cpp-in-compose-qwen3-5-0-8b-four-slots-a-pinned-file.md) | llama.cpp in Compose: Qwen3.5-0.8B, four slots, and a model file pinned by its commit | Accepted | 2026-11-10 |
 | [0026](0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md) | Runs against the local upstreams: the upstream alone as the baseline, a rung at 200, and llama.cpp one request at a time | Accepted | 2026-11-13 |
+| [0027](0027-fairness-1-cpu-and-512-mib-each-helpers-on-other-cores-production-set-ups-without-request-logs.md) | Fairness: 1 CPU and 512 MiB each, the helpers on other cores, and production set-ups without request logs | Proposed | 2026-11-16 |

@@ -12,10 +12,12 @@ import (
 )
 
 // New returns the contract's four endpoints, under /api, answered by client. The router is
-// gin.Default(), with Gin's logger and recovery, and trusts no proxy, as Gin's warning asks:
-// none stands in front of it.
+// gin.New() with Gin's recovery alone: no backend writes a line per request, so Gin's logger is
+// left out (spec/decisions/0027). It trusts no proxy, as Gin's warning asks: none stands in
+// front of it.
 func New(client llm.Client) http.Handler {
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
 	if err := router.SetTrustedProxies(nil); err != nil {
 		panic(err) // Unreachable: nil is always a valid list.
 	}

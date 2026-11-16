@@ -30,8 +30,9 @@ COPY --from=contract fake-tokens.json /contract/fake-tokens.json
 COPY app ./app
 USER app
 EXPOSE 8000
-# One process, with uvicorn's defaults, until plan step 3.1's rule (spec/decisions/0014).
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# One process for the 1 CPU it gets, as FastAPI's container guide advises; uvicorn reads more from
+# WEB_CONCURRENCY. No access log: no backend writes a line per request (spec/decisions/0027).
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
 
 FROM base AS dev
 COPY pyproject.toml uv.lock ./

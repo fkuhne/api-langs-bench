@@ -103,6 +103,10 @@ class Backend:
             self._serving = Served(client, settings, MODELS[self.upstream])
         return self._serving
 
+    def logs(self, since: str) -> str:
+        """Every line the backend wrote since a time, in RFC 3339."""
+        return self._compose.logs(self.service, since=since)
+
     def forget(self) -> None:
         """Its settings are about to change outside `serve`."""
         if self._serving is not None:
