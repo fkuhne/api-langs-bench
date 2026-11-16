@@ -16,7 +16,7 @@ By default it runs every backend from both fakes, at five rates, three times ove
 
 Why it's built this way is in [0018](../spec/decisions/0018-the-first-runner-oha-as-the-load-generator-one-streamed-workload-and-runs-committed-as-json.md), [0020](../spec/decisions/0020-the-first-numbers-a-ladder-of-rates-under-provisional-limits-three-passes.md) and [0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md). The limits and the rates are provisional, and the other workloads and the resources arrive in Phase 3.
 
-To make numbers on a machine, see [Making the numbers](#making-the-numbers). The ones made so far are [below](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx), and this runner's check on the Mac is [here](#a-check-of-the-upstreams-runs-on-2026-11-13).
+To make numbers on a machine, see [Making the numbers](#making-the-numbers). The numbers made so far are [the upstreams' numbers](#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx) and, before them, [the first numbers](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx). This runner's check on the Mac is [here](#a-check-of-the-upstreams-runs-on-2026-11-13).
 
 ## What a run is
 
@@ -97,6 +97,7 @@ How to read a row:
 - **A healthy row** has a p50 and a p99 just above 240 ms, nothing under "Not 200", its load kept and its answers whole in every pass.
 - **A 200 isn't always an answer.** A stream answers 200 as soon as its request is valid. If its upstream then fails, the failure comes as an `error` event in a short body, sometimes within 2 ms. So before each run, the runner asks for one answer and keeps its size: both fakes answer the same request with the same bytes every time. A run's answers were all whole when every request got a 200 and the bytes add up. A real model's answers vary in size, so through llama.cpp only the statuses are checked ([0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)).
 - **A row that didn't keep its load** is a backend past its ceiling. Requests waited in the load generator, so the latencies run to seconds, and the percentiles leave out the requests that were never sent. Such a row says "it can't serve this rate", and its figures say little more.
+- **A row can keep its load and still be past its ceiling.** The load generator has connections to spare, four times the streams due open at once. So a backend just past its ceiling gets every request, and they queue inside it instead. Its p50 then runs far past the upstream's, and its "Added" time measures that queue, not what each request costs. One example is Python at 200 a second through the fake server, +1,086.9 ms on 2026-11-16 ([below](#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)).
 - **The first token's time isn't corrected for waiting:** oha counts it from when a request was sent, not from when it was due ([0026](../spec/decisions/0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)). Read it only in rows that kept their load.
 - **A wide range in brackets** says the passes disagreed: something disturbed one of them, on the machine or in the backend.
 - **The difference of two medians isn't the median of each request's difference.** It describes the typical request, and says nothing of the tail. Each event's own time is plan step 3.3's.
@@ -309,6 +310,85 @@ The numbers are made on the machine the owner names, with one command. On that m
 
 Numbers from different machines are never compared ([0008](../spec/decisions/0008-run-anywhere-with-docker-and-record-the-machine.md)). Timing numbers from a machine that runs Docker in a VM, such as a Mac, are for development ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
 
+## The upstreams' numbers, on 2026-11-16, on a Core i7-12850HX
+
+Plan step 2.4's numbers from both fakes: `docker compose run --rm runner`, in three passes, on the owner's second machine, the one that made [the first numbers](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx). The 105 runs are `runs/20261116T125818Z-python-fastapi-fake-100rps.json` to `runs/20261116T141339Z-go-nethttp-fake-server-2000rps.json`. The last started 75 min 21 s after the first. The files take 595,353 bytes, 5.5 to 5.9 kB each. The runs through llama.cpp on this machine are still to make.
+
+**The machine and the settings,** as every run's file records them:
+- **The host and Docker** are the first numbers': "Intel Core i7-12850HX, 16 cores / 24 threads, 32 GiB RAM, Windows 11 Enterprise 25H2 (build 26200.9448), Docker Desktop (WSL 2)", from `BENCH_MACHINE`; Docker 29.7.2, as Docker Desktop, on kernel 6.18.33.2-microsoft-standard-WSL2, x86-64, with 24 CPUs and 15.4 GiB; Compose 5.1.4.
+- **The timers** woke 0.11 to 0.33 ms late at the median before each run, and 0.25 to 1.24 ms at the p99.
+- **The limits:** 1 CPU and 536,870,912 bytes for every backend, read back from Docker. The fake server has none.
+- **The workload:** `stream-20` as [above](#what-a-run-is), for 30 s after 5 s of warm-up, from each backend's in-process fake and through the fake server.
+- **The code:** commit `fbf0a01`, with `"dirty": false` in every file. The new checkout of [0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md) worked.
+
+Each cell is the median over the three passes, with the range. The tables are the runner's own, made again from the 105 files with `bench.runner.table`:
+
+**From each backend's in-process fake**
+
+| Target | Load | Runs | p50, ms | p99, ms | First token p50, ms | Added p50, ms | Added first token, ms | Requests | Not 200 | Kept the load | All answers whole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `python-fastapi` | 100/s | 3 | 243.5 (243.3 to 243.6) | 246.9 (246.7 to 249.5) | 52.9 (52.7 to 52.9) | n/a | n/a | 9000 | 0 | 3 of 3 | 3 of 3 |
+| `python-fastapi` | 200/s | 3 | 243.4 (243.4 to 243.5) | 305.9 (284.2 to 394.7) | 52.8 (52.8 to 52.8) | n/a | n/a | 18000 | 0 | 3 of 3 | 3 of 3 |
+| `python-fastapi` | 500/s | 3 | 5438.2 (5272.4 to 5605.3) | 10097.2 (9490.9 to 10367.3) | 340.0 (328.4 to 345.7) | n/a | n/a | 31549 | 0 | 0 of 3 | 3 of 3 |
+| `python-fastapi` | 1000/s | 3 | 11915.7 (11293.5 to 12059.3) | 21934.5 (21876.6 to 22305.8) | 841.5 (832.1 to 909.2) | n/a | n/a | 29060 | 0 | 0 of 3 | 3 of 3 |
+| `python-fastapi` | 2000/s | 3 | 13996.4 (13627.4 to 14216.5) | 27006.7 (26789.6 to 27066.4) | 909.2 (791.2 to 928.8) | n/a | n/a | 31355 | 2650 | 0 of 3 | 0 of 3 |
+| `go-nethttp` | 100/s | 3 | 241.0 (240.9 to 241.0) | 242.1 (242.0 to 242.2) | 50.9 (50.8 to 50.9) | n/a | n/a | 9000 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 200/s | 3 | 240.9 (240.9 to 241.0) | 242.1 (242.0 to 242.1) | 50.9 (50.8 to 50.9) | n/a | n/a | 18000 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 500/s | 3 | 240.9 (240.8 to 240.9) | 241.9 (241.6 to 242.1) | 50.8 (50.7 to 50.8) | n/a | n/a | 45000 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 1000/s | 3 | 240.9 (240.9 to 240.9) | 242.1 (242.0 to 242.2) | 50.8 (50.8 to 50.9) | n/a | n/a | 89998 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 2000/s | 3 | 241.2 (241.0 to 241.5) | 358.9 (247.6 to 1767.6) | 51.1 (51.0 to 51.4) | n/a | n/a | 179996 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 100/s | 3 | 241.0 (241.0 to 241.0) | 242.1 (242.0 to 242.2) | 50.9 (50.8 to 50.9) | n/a | n/a | 9000 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 200/s | 3 | 241.0 (241.0 to 241.0) | 242.1 (242.0 to 242.1) | 50.9 (50.8 to 50.9) | n/a | n/a | 18000 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 500/s | 3 | 240.9 (240.8 to 240.9) | 242.0 (241.7 to 242.1) | 50.8 (50.8 to 50.8) | n/a | n/a | 45000 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 1000/s | 3 | 241.0 (240.9 to 241.0) | 242.3 (241.9 to 275.0) | 50.9 (50.8 to 50.9) | n/a | n/a | 89998 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 2000/s | 3 | 241.3 (241.2 to 307.0) | 494.9 (258.5 to 2353.3) | 51.2 (51.1 to 83.4) | n/a | n/a | 179998 | 0 | 3 of 3 | 3 of 3 |
+
+**Through the fake server**
+
+| Target | Load | Runs | p50, ms | p99, ms | First token p50, ms | Added p50, ms | Added first token, ms | Requests | Not 200 | Kept the load | All answers whole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `fake-server alone` | 100/s | 3 | 240.8 (240.8 to 240.8) | 241.9 (241.9 to 242.0) | 50.8 (50.8 to 50.8) | n/a | n/a | 9000 | 0 | 3 of 3 | 3 of 3 |
+| `fake-server alone` | 200/s | 3 | 240.8 (240.8 to 240.8) | 242.1 (242.0 to 242.1) | 50.8 (50.8 to 50.8) | n/a | n/a | 18000 | 0 | 3 of 3 | 3 of 3 |
+| `fake-server alone` | 500/s | 3 | 240.8 (240.8 to 240.8) | 242.2 (242.2 to 242.2) | 50.8 (50.8 to 50.8) | n/a | n/a | 45000 | 0 | 3 of 3 | 3 of 3 |
+| `fake-server alone` | 1000/s | 3 | 240.8 (240.7 to 240.8) | 242.1 (242.1 to 242.2) | 50.8 (50.7 to 50.8) | n/a | n/a | 90000 | 0 | 3 of 3 | 3 of 3 |
+| `fake-server alone` | 2000/s | 3 | 240.8 (240.8 to 240.8) | 242.3 (242.3 to 242.4) | 50.7 (50.7 to 50.7) | n/a | n/a | 179996 | 0 | 3 of 3 | 3 of 3 |
+| `python-fastapi` | 100/s | 3 | 246.3 (246.3 to 246.3) | 279.5 (275.2 to 295.5) | 55.5 (55.5 to 55.5) | +5.5 (+5.5 to +5.5) | +4.7 (+4.7 to +4.7) | 9000 | 0 | 3 of 3 | 3 of 3 |
+| `python-fastapi` | 200/s | 3 | 1327.6 (1291.8 to 1450.0) | 1741.8 (1569.4 to 1906.9) | 329.6 (323.6 to 337.4) | +1086.9 (+1051.0 to +1209.2) | +278.9 (+272.8 to +286.7) | 17994 | 0 | 3 of 3 | 3 of 3 |
+| `python-fastapi` | 500/s | 3 | 11744.5 (11729.4 to 11884.9) | 20676.3 (20668.9 to 21020.6) | 876.9 (873.5 to 906.6) | none | none | 15801 | 0 | 0 of 3 | 3 of 3 |
+| `python-fastapi` | 1000/s | 3 | 14752.5 (14646.9 to 15183.9) | 26968.0 (26921.0 to 27157.9) | 1231.9 (1181.4 to 1246.4) | none | none | 15911 | 720 | 0 of 3 | 0 of 3 |
+| `python-fastapi` | 2000/s | 3 | 16046.1 (15995.4 to 16077.7) | 28924.1 (28921.2 to 29388.3) | 1279.6 (1261.6 to 1289.0) | none | none | 18803 | 3613 | 0 of 3 | 0 of 3 |
+| `go-nethttp` | 100/s | 3 | 241.4 (241.4 to 241.4) | 242.9 (242.8 to 242.9) | 51.3 (51.3 to 51.3) | +0.6 (+0.6 to +0.6) | +0.5 (+0.5 to +0.6) | 9000 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 200/s | 3 | 241.2 (241.2 to 241.2) | 242.6 (242.6 to 242.6) | 51.2 (51.1 to 51.2) | +0.4 (+0.4 to +0.4) | +0.4 (+0.4 to +0.4) | 18000 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 500/s | 3 | 241.0 (241.0 to 241.0) | 242.5 (242.2 to 1212.9) | 51.0 (50.9 to 51.0) | +0.3 (+0.2 to +0.3) | +0.2 (+0.1 to +0.2) | 45000 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 1000/s | 3 | 241.3 (241.1 to 241.5) | 323.1 (295.2 to 326.9) | 51.3 (51.1 to 51.4) | +0.5 (+0.3 to +0.8) | +0.5 (+0.3 to +0.7) | 89999 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 2000/s | 3 | 591.9 (331.8 to 6073.2) | 3965.9 (502.0 to 6617.2) | 449.7 (156.3 to 998.7) | +91.0 | +105.6 | 163493 | 0 | 1 of 3 | 3 of 3 |
+| `go-gin` | 100/s | 3 | 241.5 (241.4 to 241.5) | 242.8 (242.6 to 243.0) | 51.4 (51.4 to 51.4) | +0.7 (+0.7 to +0.7) | +0.6 (+0.6 to +0.6) | 9000 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 200/s | 3 | 241.3 (241.3 to 241.3) | 242.8 (242.4 to 242.8) | 51.3 (51.1 to 51.3) | +0.6 (+0.5 to +0.6) | +0.5 (+0.3 to +0.5) | 18000 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 500/s | 3 | 241.1 (241.1 to 241.1) | 242.4 (242.3 to 242.4) | 51.0 (51.0 to 51.0) | +0.3 (+0.3 to +0.3) | +0.2 (+0.2 to +0.2) | 45000 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 1000/s | 3 | 241.2 (241.2 to 273.3) | 269.4 (264.8 to 1887.3) | 51.2 (51.1 to 86.0) | +0.5 (+0.4 to +32.5) | +0.4 (+0.4 to +35.3) | 89878 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 2000/s | 3 | 2503.5 (1567.2 to 9194.4) | 4621.8 (3378.9 to 11764.8) | 894.8 (884.0 to 1050.8) | none | none | 148760 | 0 | 0 of 3 | 3 of 3 |
+
+What the runs show:
+- **The fake server alone kept every rate in every pass,** with a p50 of 240.7 to 240.8 ms, a p99 of 242.4 ms at most, and every answer whole. On this machine it isn't what limits a backend (R4).
+- **From their in-process fakes, both Go servers kept every rate,** with a median p50 of 240.9 to 241.3 ms. At 2,000 a second each had one pass with a long tail: `net/http`'s p99 was 1,767.6 ms in pass 1, and Gin's p50 was 307.0 ms and its p99 2,353.3 ms in pass 3.
+- **Through the fake server, both Go servers added 0.3 to 0.7 ms up to 1,000 a second,** with every answer whole. The first token's added time is nearly the same, 0.2 to 0.6 ms, so it's paid before the first token. Gin added 0.1 to 0.2 ms more than `net/http` at 100 and 200 a second, and the same at 500 and 1,000. One of Gin's passes at 1,000 a second was disturbed: a p50 of 273.3 ms, 32.5 ms over the fake server's.
+- **Neither Go server kept 2,000 a second through the fake server.** `net/http` reached 1,644 and 1,806 a second in two passes. In the third it kept the rate, but its median stream ended at 331.8 ms. Gin reached 1,304 to 1,866 a second. Both kept 2,000 from their in-process fakes in every pass. So on this machine, under 1 CPU, calling an upstream puts Go's ceiling between 1,000 and 2,000 a second.
+- **Python added 5.5 ms over the fake server at 100 a second,** in every pass, and 4.7 ms to the first token. From its in-process fake its p50 was 243.5 ms, 3.5 ms past due, against Go's 1.0.
+- **Calling an upstream halves Python's ceiling here.** From its in-process fake it kept 200 a second, and at 500 it reached 345 to 359 a second. Through the fake server, at 500 a second, it reached 175 to 177. At 200 it was already past its ceiling: the load generator sent every request, but they queued inside the backend, and its median stream ended at 1.29 to 1.45 s.
+- **Two rows kept their load past a ceiling:** Python at 200 a second, and `net/http`'s third pass at 2,000. Their added times, +1,086.9 and +91.0 ms, measure a queue, not what each request costs ([reading a table](#reading-a-table-of-runs)).
+- **The only errors were timeouts,** past Python's ceiling: requests with no answer within 30 s. There were 863 to 916 a run from its in-process fake at 2,000 a second, and 233 to 247 and 1,201 to 1,210 through the fake server at 1,000 and 2,000. Every other request got a 200 and a whole answer.
+- **The added time is as steady as the backend's own median, not steadier.** The fake server alone moved by 0.08 ms at most from one pass to the next, so taking it away changes little. Where a backend kept up, the two ranges were within 0.1 ms of each other (our reading of the 105 files).
+
+Beside the first numbers, made on the same machine six days before:
+- **From their in-process fakes, both Go servers are where they were,** within 0.2 ms at every rate both runs measured.
+- **Python's p50 at 100 a second is 0.3 ms later:** 243.5 ms, against 243.2. The fix to its fake's clock predicted about 0.5 ms (computed) ([0022](../spec/decisions/0022-the-python-fake-keeps-time-on-the-systems-monotonic-clock-not-uvloops.md)).
+- **Python's ceiling from its in-process fake is higher:** 345 to 359 a second at 500, against 281 to 317. Why isn't known: a run doesn't record the backend's CPU yet (plan step 3.4).
+
+What these numbers are:
+- **For development.** Docker Desktop runs its containers in a VM, WSL 2, so its timing numbers don't reach the report ([0015](../spec/decisions/0015-keep-docker-and-take-the-reports-timing-numbers-from-native-linux.md)).
+- **Not compared with the Mac's check above** ([0008](../spec/decisions/0008-run-anywhere-with-docker-and-record-the-machine.md)).
+- **Under provisional limits and rates,** which plan steps 3.1 and 3.2 set.
+
 ## The first numbers, on 2026-11-10, on a Core i7-12850HX
 
 Plan step 1.8's numbers: `docker compose run --rm runner`, the whole ladder, on the owner's second machine. The 36 runs are `runs/20261110T115536Z-python-fastapi-100rps.json` to `runs/20261110T122007Z-go-nethttp-2000rps.json`. The last started 24 min 31 s after the first. The files take 197,511 bytes, 5.4 to 5.6 kB each.
@@ -366,4 +446,4 @@ Every one of the 36 files has `"dirty": true`, which says a tracked file differe
 
 **Checked on that machine by the owner, 2026-11-10:** `git status` says the tree is clean, and `git config --show-origin core.autocrlf` says `true`. That fits the cause, and the file that sets it is `C:/Program Files/Git/etc/gitconfig`, Git for Windows' system-wide config, outside the repository.
 
-**The fix** is a `.gitattributes` that keeps LF endings on every system ([0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md)). A clone made before it needs checking out again, with the four commands in that record. On the Mac, a clone made the way Git for Windows makes one then had no CRLF file, and read as clean. The 36 runs stay as they are; a run on that machine that says `"dirty": false` is still to make.
+**The fix** is a `.gitattributes` that keeps LF endings on every system ([0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md)). A clone made before it needs checking out again, with the four commands in that record. On the Mac, a clone made the way Git for Windows makes one then had no CRLF file, and read as clean. The 36 runs stay as they are. The 105 runs made there on 2026-11-16, after the four commands, all say `"dirty": false` ([above](#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)).

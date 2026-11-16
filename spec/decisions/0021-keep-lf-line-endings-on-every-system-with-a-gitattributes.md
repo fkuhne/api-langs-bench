@@ -50,7 +50,7 @@ A `.gitattributes` at the root says `* text=auto eol=lf`: every text file is che
 
 - [x] With the file, a clone made under a `core.autocrlf` set outside the repository has LF endings, and the runner's reader calls it clean. *2026-11-10, on the Mac: no file with CRLF endings, and `dirty` false, against 180 files and `dirty` true without it (our run).*
 - [x] The four commands turn an older clone's files to LF endings, and keep `.env` and uncommitted runs. *2026-11-10, on the Mac, in a clone made as above: 180 files with CRLF endings before, none after, and both kept (our run).*
-- [ ] On the owner's Windows machine, a run made after the new checkout says `"dirty": false`. To check with the next runs there.
+- [x] On the owner's Windows machine, a run made after the new checkout says `"dirty": false`. To check with the next runs there. *2026-11-16: yes, all 105 runs of plan step 2.4, at commit `fbf0a01` ([runner](../../docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)).*
 - [ ] Nothing on Windows needs CRLF endings. Unchecked: every tool runs in a Linux container, and editors on Windows read LF.
 
 ## Sources

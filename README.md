@@ -29,18 +29,28 @@ flowchart LR
 
 ## A first look
 
-The first numbers, to show what a result looks like. Each backend streamed 20 pieces of text, due to end at 240 ms, from the fake inside it, with 1 CPU and 512 MiB. The cell is the median latency over three runs of 30 s.
+The latest numbers, to show what a result looks like. Each backend streamed 20 pieces of text, due to end at 240 ms, with 1 CPU and 512 MiB. Each cell is the median over three runs of 30 s.
 
-| Requests a second | 100 | 500 | 1,000 | 2,000 |
-|---|---|---|---|---|
-| Python, FastAPI | 243.2 ms | fell behind | fell behind | fell behind |
-| Go, `net/http` | 240.9 ms | 240.8 ms | 240.9 ms | 241.0 ms |
-| Go, Gin | 241.0 ms | 240.8 ms | 240.9 ms | 241.3 ms |
+**From the fake inside each backend,** the median latency:
 
-- **Both Go servers added about 1 ms** to each stream, all the way to 2,000 requests a second.
-- **Python added about 3 ms at 100 requests a second,** and answered about 300 streams a second at most. Past that, requests queued.
+| Requests a second | 100 | 200 | 500 | 1,000 | 2,000 |
+|---|---|---|---|---|---|
+| Python, FastAPI | 243.5 ms | 243.4 ms | fell behind | fell behind | fell behind |
+| Go, `net/http` | 241.0 ms | 240.9 ms | 240.9 ms | 240.9 ms | 241.2 ms |
+| Go, Gin | 241.0 ms | 241.0 ms | 240.9 ms | 241.0 ms | 241.3 ms |
 
-**Read these as a preview, not a verdict.** They come from one development machine that runs Docker in a VM, under limits and rates that are still provisional, and Python runs as one process here. The measured report comes later, from native Linux. The full table, its 36 runs and its caveats are in [the runner's notes](docs/runner.md#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx).
+**Through the fake server,** a separate process that answers like llama.cpp, the time each backend added over the fake server alone:
+
+| Requests a second | 100 | 200 | 500 | 1,000 | 2,000 |
+|---|---|---|---|---|---|
+| Python, FastAPI | +5.5 ms | fell behind | fell behind | fell behind | fell behind |
+| Go, `net/http` | +0.6 ms | +0.4 ms | +0.3 ms | +0.5 ms | fell behind |
+| Go, Gin | +0.7 ms | +0.6 ms | +0.3 ms | +0.5 ms | fell behind |
+
+- **Both Go servers added about 1 ms** to each stream from their own fake, all the way to 2,000 requests a second. Through the fake server they added under 1 ms over it, up to 1,000 a second.
+- **Python added about 3.5 ms,** and kept up with 200 requests a second from its own fake, about 350 at most. Calling the fake server halved that, to about 175.
+
+**Read these as a preview, not a verdict.** They come from one development machine that runs Docker in a VM, under limits and rates that are still provisional, and Python runs as one process here. The measured report comes later, from native Linux. The full tables, their 105 runs and their caveats are in [the runner's notes](docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx).
 
 ## Try it
 
@@ -96,7 +106,7 @@ Port 8001 is Python on FastAPI, 8002 is Go on `net/http`, and 8003 is Go on Gin.
 | Phase | What | Status |
 |---|---|---|
 | 1 | A thin slice: the contract, three backends, the conformance suite, a first runner, CI, the first numbers | Done |
-| 2 | The local upstreams: a fake server, each backend's client for it, and llama.cpp | Under way: every backend [calls](docs/backends.md#the-upstream-client) the [fake server](docs/fake-server.md) or [llama.cpp](docs/llama-cpp.md). Runs against them come next |
+| 2 | The local upstreams: a fake server, each backend's client for it, and llama.cpp | Under way: every backend [calls](docs/backends.md#the-upstream-client) the [fake server](docs/fake-server.md) or [llama.cpp](docs/llama-cpp.md), and the [runs through the fake server](docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx) are made. The runs through llama.cpp come next |
 | 3 | Measuring: the fairness rules, more workloads, how streams behave, memory and CPU | Planned |
 | 4 | A remote upstream: an imitation behind a network emulator, and Ollama Cloud | Planned |
 | 5 | Conversations stored in PostgreSQL | Planned |
