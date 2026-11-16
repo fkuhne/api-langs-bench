@@ -174,7 +174,7 @@ go-gin via fake-server: 42 events, lateness median 6.76 ms, min 5.34, max 18.93;
 - **Every backend answers through the fake server what it answers alone:** the same 99 checks pass from both upstreams.
 - **Why the tolerance is wider there.** The run before this one failed one check of 627: Python's stream through the fake server came 17.75 ms late at the median, against a T of 15.34 ms. Both Go servers were close, at 10.36 and 14.13 ms. Behind an upstream, an event crosses three late wake-ups in Docker's VM, not two: the fake server's timer, the backend's read, and the client's read. With 5 ms more, Python's 18.58 ms above is within its T of 20.19 ms.
 - **That's the Mac's VM again.** On Linux's timers the margin is loose in both cases; CI's lines will say how late each backend is there.
-- **Python is later than Go through the fake server,** by about 9 ms here against 2 to 5 ms alone. One stream at a time, on an idle VM, says little about load; plan step 2.4 measures it.
+- **Python is later than Go through the fake server,** by about 9 ms here against 2 to 5 ms alone. One stream at a time, on an idle VM, says little about load; plan step 2.4 measures it ([its numbers](runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)).
 
 **In CI, on Linux's timers,** three attempts of [run 42905293392](https://github.com/fkuhne/api-langs-bench/actions/runs/42905293392), on commit `613f140`: 627 checks passed in each, in 170 to 174 s. The median lateness of each paced stream:
 

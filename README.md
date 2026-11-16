@@ -106,7 +106,7 @@ Port 8001 is Python on FastAPI, 8002 is Go on `net/http`, and 8003 is Go on Gin.
 | Phase | What | Status |
 |---|---|---|
 | 1 | A thin slice: the contract, three backends, the conformance suite, a first runner, CI, the first numbers | Done |
-| 2 | The local upstreams: a fake server, each backend's client for it, and llama.cpp | Under way: every backend [calls](docs/backends.md#the-upstream-client) the [fake server](docs/fake-server.md) or [llama.cpp](docs/llama-cpp.md), and the [runs through the fake server](docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx) are made. The runs through llama.cpp come next |
+| 2 | The local upstreams: a [fake server](docs/fake-server.md), each backend's [client](docs/backends.md#the-upstream-client) for it, [llama.cpp](docs/llama-cpp.md), and [runs through each](docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx) | Done |
 | 3 | Measuring: the fairness rules, more workloads, how streams behave, memory and CPU | Planned |
 | 4 | A remote upstream: an imitation behind a network emulator, and Ollama Cloud | Planned |
 | 5 | Conversations stored in PostgreSQL | Planned |

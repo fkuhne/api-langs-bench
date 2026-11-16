@@ -312,14 +312,17 @@ Numbers from different machines are never compared ([0008](../spec/decisions/000
 
 ## The upstreams' numbers, on 2026-11-16, on a Core i7-12850HX
 
-Plan step 2.4's numbers from both fakes: `docker compose run --rm runner`, in three passes, on the owner's second machine, the one that made [the first numbers](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx). The 105 runs are `runs/20261116T125818Z-python-fastapi-fake-100rps.json` to `runs/20261116T141339Z-go-nethttp-fake-server-2000rps.json`. The last started 75 min 21 s after the first. The files take 595,353 bytes, 5.5 to 5.9 kB each. The runs through llama.cpp on this machine are still to make.
+Plan step 2.4's numbers, on the owner's second machine, the one that made [the first numbers](#the-first-numbers-on-2026-11-10-on-a-core-i7-12850hx). Each command ran three passes:
+- **From both fakes,** `docker compose run --rm runner`: 105 runs, `runs/20261116T125818Z-python-fastapi-fake-100rps.json` to `runs/20261116T141339Z-go-nethttp-fake-server-2000rps.json`. The last started 75 min 21 s after the first. The files take 595,353 bytes, 5.5 to 5.9 kB each.
+- **Through llama.cpp,** `docker compose run --rm runner --upstream llama-cpp`, later the same day: 12 runs, `runs/20261116T165710Z-python-fastapi-llama-cpp-30x1.json` to `runs/20261116T170048Z-go-nethttp-llama-cpp-30x1.json`. The last started 3 min 38 s after the first. The files take 66,936 bytes.
 
 **The machine and the settings,** as every run's file records them:
 - **The host and Docker** are the first numbers': "Intel Core i7-12850HX, 16 cores / 24 threads, 32 GiB RAM, Windows 11 Enterprise 25H2 (build 26200.9448), Docker Desktop (WSL 2)", from `BENCH_MACHINE`; Docker 29.7.2, as Docker Desktop, on kernel 6.18.33.2-microsoft-standard-WSL2, x86-64, with 24 CPUs and 15.4 GiB; Compose 5.1.4.
 - **The timers** woke 0.11 to 0.33 ms late at the median before each run, and 0.25 to 1.24 ms at the p99.
 - **The limits:** 1 CPU and 536,870,912 bytes for every backend, read back from Docker. The fake server has none.
-- **The workload:** `stream-20` as [above](#what-a-run-is), for 30 s after 5 s of warm-up, from each backend's in-process fake and through the fake server.
-- **The code:** commit `671f67d`, with `"dirty": false` in every file. The files name it `fbf0a01`, its hash before the history was [rewritten](../runs/README.md#commits-renamed-on-2026-11-16). The new checkout of [0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md) worked.
+- **The workloads:** `stream-20` as [above](#what-a-run-is), for 30 s after 5 s of warm-up, from each backend's in-process fake and through the fake server; and `llama-20` through llama.cpp, 30 requests one at a time after 3 warm-ups.
+- **llama.cpp:** the pinned server, `b12242`, with Qwen3.5-0.8B and 4 slots ([0025](../spec/decisions/0025-llama-cpp-in-compose-qwen3-5-0-8b-four-slots-a-pinned-file.md)), without limits.
+- **The code:** commit `671f67d` for the fakes' runs, and `40e05df` for llama.cpp's, which changed only notes and runs. Every file says `"dirty": false`: the new checkout of [0021](../spec/decisions/0021-keep-lf-line-endings-on-every-system-with-a-gitattributes.md) worked. The fakes' files name `fbf0a01`, the first commit's hash before the history was [rewritten](../runs/README.md#commits-renamed-on-2026-11-16).
 
 Each cell is the median over the three passes, with the range. The tables are the runner's own, made again from the 105 files with `bench.runner.table`:
 
@@ -378,6 +381,20 @@ What the runs show:
 - **Two rows kept their load past a ceiling:** Python at 200 a second, and `net/http`'s third pass at 2,000. Their added times, +1,086.9 and +91.0 ms, measure a queue, not what each request costs ([reading a table](#reading-a-table-of-runs)).
 - **The only errors were timeouts,** past Python's ceiling: requests with no answer within 30 s. There were 863 to 916 a run from its in-process fake at 2,000 a second, and 233 to 247 and 1,201 to 1,210 through the fake server at 1,000 and 2,000. Every other request got a 200 and a whole answer.
 - **The added time is as steady as the backend's own median, not steadier.** The fake server alone moved by 0.08 ms at most from one pass to the next, so taking it away changes little. Where a backend kept up, the two ranges were within 0.1 ms of each other (our reading of the 105 files).
+
+**Through llama.cpp**
+
+| Target | Load | Runs | p50, ms | p99, ms | First token p50, ms | Added p50, ms | Added first token, ms | Requests | Not 200 | Kept the load | All answers whole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `llama-cpp alone` | 30, one at a time | 3 | 372.8 (359.3 to 378.4) | 442.2 (392.1 to 609.3) | 31.0 (29.9 to 32.1) | n/a | n/a | 90 | 0 | 3 of 3 | 3 of 3 |
+| `python-fastapi` | 30, one at a time | 3 | 534.7 (357.0 to 550.2) | 712.5 (391.5 to 727.4) | 59.3 (32.1 to 60.7) | +161.9 (-2.3 to +171.8) | +28.2 (+2.1 to +28.6) | 90 | 0 | 3 of 3 | 3 of 3 |
+| `go-nethttp` | 30, one at a time | 3 | 363.4 (356.0 to 384.8) | 511.2 (386.0 to 659.4) | 31.4 (31.1 to 33.0) | -3.3 (-15.0 to +12.0) | +1.2 (-0.7 to +1.9) | 90 | 0 | 3 of 3 | 3 of 3 |
+| `go-gin` | 30, one at a time | 3 | 396.6 (386.5 to 519.5) | 478.0 (422.5 to 1492.8) | 34.3 (33.2 to 54.6) | +27.2 (+23.9 to +141.1) | +3.2 (+3.2 to +22.5) | 90 | 0 | 3 of 3 | 3 of 3 |
+
+What these runs show:
+- **Every request got a 200 and a whole answer.** Each backend's 30 answers came to the same bytes in every pass, so the seed held: 911 bytes each from Python and `net/http`, and 869 from Gin, whose events leave out the space after each colon, as the event-stream format allows (our run of both servers).
+- **Through llama.cpp, a backend's cost doesn't show here either.** llama.cpp alone took 359.3 to 378.4 ms at the median, and the backends' added time ranged from -15.0 to +171.8 ms. Through the fake server, no backend added more than 5.5 ms where it kept up.
+- **Three runs were slower for most of their requests:** Python's passes 2 and 3, and Gin's pass 3. Their p50 was 519.5 to 550.2 ms, and their first token 54.6 to 60.7 ms, against 356.0 to 396.6 ms and 31.1 to 34.3 ms in the other runs. Their fastest requests took 343.4 to 361.4 ms, near the other runs' 335.6 to 348.4, so the slowdown came during each run. A slowdown that large, first token included, is the model's own, not the backend's. Why it slowed isn't known: a run doesn't record the machine's load yet (plan step 3.4).
 
 Beside the first numbers, made on the same machine six days before:
 - **From their in-process fakes, both Go servers are where they were,** within 0.2 ms at every rate both runs measured.

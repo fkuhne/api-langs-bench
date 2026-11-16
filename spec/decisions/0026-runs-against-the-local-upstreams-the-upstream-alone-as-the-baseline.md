@@ -70,6 +70,15 @@ The runner runs each backend from both fakes by default, and from llama.cpp when
 - **Through the fake server on the Mac,** Go added 0.2 to 0.9 ms, and Python 2.0 to 3.3 ms, and Python ran out between 200 and 500 a second.
 - **llama.cpp's v1.0.0 came out on 2026-11-13,** as build `b12359`. Its `server` image's stream and whole answer have the same fields, in the same order, as `b12242`'s, which stays pinned for now ([0025](0025-llama-cpp-in-compose-qwen3-5-0-8b-four-slots-a-pinned-file.md)).
 
+## Learned from the numbers
+
+On 2026-11-16, on the owner's Core i7-12850HX with Docker Desktop on Windows: 117 runs ([runner](../../docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)).
+- **Calling an upstream costs a backend much of its ceiling.** Under 1 CPU, Python's fell from about 350 streams a second, from its in-process fake, to about 175 through the fake server. Go's fell from 2,000 or more to between 1,000 and 2,000.
+- **Below the ceiling, the cost is small.** Go added 0.3 to 0.7 ms over the fake server, and Python 5.5 ms at 100 a second.
+- **A run can keep its load past a ceiling.** The load generator has connections to spare, so the requests queue in the backend, and the added time then measures that queue: +1,086.9 ms for Python at 200 a second. Only the p50 shows it.
+- **Through llama.cpp, a backend's cost doesn't show on this machine either.** The model's own median moved from 356 to 550 ms between runs.
+- **The seed holds:** every backend's 30 answers came to the same bytes in every pass.
+
 ## Sources
 
 - [oha 1.16.0's `client.rs` and `result_data.rs`](https://github.com/hatoo/oha/tree/v1.16.0/src), read on 2026-11-13.
@@ -77,3 +86,4 @@ The runner runs each backend from both fakes by default, and from llama.cpp when
 - Our runs of 2026-11-10 ([runner](../../docs/runner.md), [backends](../../docs/backends.md#the-upstream-client), [fake server](../../docs/fake-server.md)).
 - The check's 47 runs, 2026-11-13 ([runner](../../docs/runner.md#a-check-of-the-upstreams-runs-on-2026-11-13)).
 - The owner's picks, 2026-11-13.
+- The owner's 117 runs, 2026-11-16 ([runner](../../docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)).

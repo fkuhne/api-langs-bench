@@ -91,7 +91,7 @@ The fake server is written in Go, with the standard library alone, as its own mo
 - [ ] llama.cpp sends its role chunk and its first token in the same write. Unchecked: the capture shows them as separate events, not when each left.
 - [x] llama.cpp's reasoning chunk is `{"reasoning_content": "…"}` in the delta, with no `content`. From its README; to capture at plan step 2.3. *2026-11-10: captured from Qwen3.5-0.8B: `"delta":{"reasoning_content":"Thinking"}` ([llama.cpp](../../docs/llama-cpp.md)).*
 - [ ] A 429 never comes from llama.cpp itself. Unchecked; the fake server's 429 body follows its error format, with a type of our own.
-- [ ] A backend's client can't tell the fake server from llama.cpp by anything it reads ([0004](0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)). To check at plan step 2.4, where each backend runs against both.
+- [x] A backend's client can't tell the fake server from llama.cpp by anything it reads ([0004](0004-three-local-upstreams-llama-cpp-a-fake-server-and-an-in-process-fake.md)). To check at plan step 2.4, where each backend runs against both. *2026-11-16: by what it parses, no. Every backend got whole answers from both, in every run it kept up with ([runner](../../docs/runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)). By its connections, yes: llama.cpp closes its connection after every stream, and the fake server keeps it open ([0026](0026-runs-against-the-local-upstreams-the-upstream-alone-as-the-baseline.md)).*
 
 ## Sources
 

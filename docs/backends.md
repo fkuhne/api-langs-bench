@@ -225,7 +225,7 @@ Built in plan step 2.2 ([0024](../spec/decisions/0024-each-backends-upstream-cli
 - **The timeout doesn't cut a long stream,** in either language.
 - **Each backend closes the upstream's connection when its client leaves.** Gin's was seen about 13 ms later than the others', once. How fast each does it under load is plan step 3.3.
 
-**A first look under load,** to see that the client holds: the `stream-20` request at fixed rates for 15 s, with oha, on the same busy Mac. Nothing was saved as a run, so these are a sketch, not results; plan step 2.4 measures it.
+**A first look under load,** to see that the client holds: the `stream-20` request at fixed rates for 15 s, with oha, on the same busy Mac. Nothing was saved as a run, so these are a sketch, not results; plan step 2.4 measures it ([its numbers](runner.md#the-upstreams-numbers-on-2026-11-16-on-a-core-i7-12850hx)).
 
 | Backend | Rate | p50 | p99 | Its CPU | The fake server's CPU |
 |---|---|---|---|---|---|
